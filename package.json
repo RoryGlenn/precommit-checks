@@ -2,6 +2,7 @@
   "name": "precommit-checks",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Non-blocking Git pre-commit checks for ESLint and Prettier.",
   "scripts": {
     "prepare": "husky",
