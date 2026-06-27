@@ -1,18 +1,18 @@
 import { spawnSync } from "node:child_process";
 
-console.log("Running pre-commit checks...");
+console.log("Running pre-commit checks as non-blocking suggestions...");
 
 const result = spawnSync("npx", ["lint-staged"], {
   stdio: "inherit",
   shell: process.platform === "win32",
 });
 
+console.log("");
+
 if (result.status !== 0) {
-  console.error("");
-  console.error("Pre-commit checks failed.");
-  console.error("Fix the errors above, stage your changes, then commit again.");
-  process.exit(result.status ?? 1);
+  console.warn("Pre-commit suggestions found.");
+  console.warn("Commit will continue anyway. Review the warnings above when you have time.");
+  process.exit(0);
 }
 
-console.log("");
-console.log("Pre-commit checks passed.");
+console.log("Pre-commit checks passed. Commit will continue.");

@@ -7,13 +7,18 @@
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "*.{js,jsx,mjs,json,css,scss,md,html,yml,yaml}": [
+    "*.{js,jsx,mjs}": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,css,scss,md,html,yml,yaml}": [
       "prettier --write"
     ]
   },
   "devDependencies": {
+    "eslint": "^10.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
-    "prettier": "^3.5.3"
+    "prettier": "^3.9.0"
   }
 }

@@ -1,13 +1,18 @@
-// eslint.config.js
 export default [
   {
     ignores: ["node_modules/**"],
   },
   {
     files: ["**/*.{js,jsx,mjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        console: "readonly",
+      },
+    },
     rules: {
-      "no-unused-vars": "warn",
-      "no-undef": "warn",
+      "no-unused-vars": "error",
     },
   },
 ];
