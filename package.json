@@ -5,12 +5,12 @@
   "type": "module",
   "description": "Non-blocking Git pre-commit checks for ESLint and Prettier.",
   "scripts": {
-    "prepare": "husky",
-    "precommit": "lint-staged",
+    "prepare": "husky install",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "build": "vite build",
     "test:precommit": "node scripts/precommit.mjs",
     "test:prepush": "node scripts/prepush.mjs"
   },
@@ -29,9 +29,8 @@
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
     "picocolors": "^1.1.1",
-    "prettier": "^3.0.0"
-  },
-  "dependencies": {
+    "prettier": "^3.0.0",
     "vite": "^8.1.0"
-  }
+  },
+  "dependencies": {}
 }

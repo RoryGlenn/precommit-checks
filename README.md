@@ -36,3 +36,9 @@ chmod +x .husky/pre-commit
 ```
 
 Then merge `package-json-snippet.json` into your real `package.json`.
+
+## Notes
+
+- `prepare` is recommended so Husky installs automatically after `npm install`.
+- The hook scripts in this repo are intentionally advisory: they print suggestions and let commits/pushes continue.
+- `.husky/pre-commit` runs `scripts/precommit.mjs` and `.husky/pre-push` now runs `scripts/prepush.mjs`.

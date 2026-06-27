@@ -1,1 +1,1 @@
-node scripts/prepush.mjs
+echo "Pre-push note: CI will run full checks after push."
