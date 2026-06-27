@@ -41,4 +41,5 @@ Then merge `package-json-snippet.json` into your real `package.json`.
 
 - `prepare` is recommended so Husky installs automatically after `npm install`.
 - The hook scripts in this repo are intentionally advisory: they print suggestions and let commits/pushes continue.
-- `.husky/pre-commit` runs `scripts/precommit.mjs` and `.husky/pre-push` now runs `scripts/prepush.mjs`.
+- `.husky/pre-commit` runs `scripts/precommit.mjs`.
+- `.husky/pre-push` currently only prints a note and does not run a script.

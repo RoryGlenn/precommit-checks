@@ -11,8 +11,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "build": "vite build",
-    "test:precommit": "node scripts/precommit.mjs",
-    "test:prepush": "node scripts/prepush.mjs"
+    "test:precommit": "node scripts/precommit.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,mjs}": [

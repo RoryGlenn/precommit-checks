@@ -15,7 +15,7 @@ function printBox(message, color = (value) => value) {
   );
 }
 
-printBox("Pre-commit suggestions", pc.cyan);
+printBox(pc.bold("Pre-commit suggestions"), pc.cyan);
 
 const result = spawnSync("npx", ["lint-staged", "--quiet"], {
   stdio: "inherit",
@@ -27,7 +27,7 @@ console.log("");
 if (result.status !== 0) {
   printBox(
     [
-      "Suggestions found.",
+      pc.bold("Suggestions found."),
       "",
       "Commit will continue anyway.",
       "Run npm run format or npm run lint:fix when ready.",
