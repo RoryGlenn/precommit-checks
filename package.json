@@ -1,0 +1,19 @@
+{
+  "name": "precommit-checks",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,json,css,scss,md,html,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.5.3"
+  }
+}
