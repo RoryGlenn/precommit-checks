@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const unusedConstant = 42;
-let unusedLet = "unused";
+let unusedLet = "unused"; 
 var unusedVar = true;
 
 const data = {
