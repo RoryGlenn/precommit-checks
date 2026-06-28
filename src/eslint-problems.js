@@ -140,9 +140,11 @@ for (let i = 0; i < 4; i += 1) {
 if (unusedVar) {
   const conditionalUnused = "branch";
 }
-
+!
+~
+1/0
 print('hello world')
-
+jkhghjkl
 const usedValue = mixedUsage(5, 10, 15);
 console.log(usedValue, usedArrow(7, 8), buildSummary(8, 9, 10, 11));
 
