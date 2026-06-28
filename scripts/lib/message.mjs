@@ -47,8 +47,8 @@ export function buildAdvisoryMessage(issues, context = {}) {
     lines.push(
       pc.dim(
         hasNonFixableIssue
-          ? "After this commit completes, you can still apply automatic fixes and amend it:"
-          : "After this commit completes, apply automatic fixes and amend it:",
+          ? "you can still apply automatic fixes and amend it:"
+          : "apply automatic fixes and amend it:",
       ),
     );
     lines.push(`  ${pc.bold("npm run commit:fix")}`);
