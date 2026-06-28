@@ -19,7 +19,7 @@ test("warns and recommends commit:fix when amend is safe", () => {
   const text = lines.join("\n");
   assert.equal(severity, "warning");
   assert.ok(text.includes("npm run commit:fix"));
-  assert.ok(!text.includes("Manual warnings above"));
+  assert.ok(!text.includes("still need your attention"));
 });
 
 test("mixed warnings recommend commit:fix and flag manual work", () => {
@@ -32,9 +32,7 @@ test("mixed warnings recommend commit:fix and flag manual work", () => {
   );
   const text = lines.join("\n");
   assert.ok(text.includes("npm run commit:fix"));
-  assert.ok(
-    text.includes("Manual warnings above will still need your attention."),
-  );
+  assert.ok(text.includes("Manual items above still need your attention."));
 });
 
 test("suppresses commit:fix when tracked worktree changes block amend", () => {

@@ -22,7 +22,7 @@ export function buildAdvisoryMessage(issues, context = {}) {
   const lines = [
     pc.bold("Pre-commit suggestions found"),
     "",
-    pc.dim("Commit will continue. Issues detected:"),
+    pc.dim("Commit will continue. Suggestions:"),
     "",
   ];
 
@@ -56,14 +56,13 @@ export function buildAdvisoryMessage(issues, context = {}) {
     if (hasNonFixableIssue) {
       lines.push("");
       lines.push(
-        pc.dim("Manual warnings above will still need your attention."),
+        pc.dim("commit:fix only auto-fixes formatting and fixable lint."),
       );
+      lines.push(pc.dim("Manual items above still need your attention."));
     }
   } else if (hasFixableIssue) {
     if (hasNonFixableIssue) {
-      lines.push(
-        pc.dim("Manual warnings above will still need your attention."),
-      );
+      lines.push(pc.dim("Manual items above still need your attention."));
       lines.push("");
     }
 

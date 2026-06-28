@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import path from "node:path";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
 import {
@@ -8,7 +9,11 @@ import {
   spawnAsync,
 } from "./lib/process.mjs";
 import { loadPrecommitConfig } from "./lib/config.mjs";
-import { parsePrettierList, summarizeEslintJson } from "./lib/checks.mjs";
+import {
+  eslintManualIssues,
+  parsePrettierList,
+  summarizeEslintJson,
+} from "./lib/checks.mjs";
 import { buildAdvisoryMessage } from "./lib/message.mjs";
 import {
   codeFilePattern,
@@ -222,10 +227,19 @@ if (eslintResult) {
     }
 
     if (eslintManualCount > 0) {
+      const manualDetail = eslintManualIssues(eslintResult.stdout)
+        .map((issue) => {
+          const rel =
+            path.relative(process.cwd(), issue.filePath) || issue.filePath;
+          const loc = issue.line ? `${rel}:${issue.line}:${issue.column}` : rel;
+          return issue.ruleId ? `${loc} (${issue.ruleId})` : loc;
+        })
+        .join("\n");
       issues.push({
         autoFixable: false,
         type: "lint",
         message: `${eslintManualCount} ESLint issue${eslintManualCount === 1 ? "" : "s"} needing manual fixes`,
+        detail: manualDetail || undefined,
       });
     }
 
@@ -287,7 +301,7 @@ if (testRun) {
         : "Unable to run staged tests",
       detail: testRun.signal
         ? `No result within ${TOOL_TIMEOUT_MS / 1000}s`
-        : "Check precommitChecks.testCommand in package.json", 
+        : "Check precommitChecks.testCommand in package.json",
     });
   } else if ((testRun.status || 0) !== 0) {
     const testOutput = `${testRun.stdout || ""}${testRun.stderr || ""}`.trim();

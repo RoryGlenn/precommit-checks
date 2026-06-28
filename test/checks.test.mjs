@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   summarizeEslintJson,
   parsePrettierList,
+  eslintManualIssues,
 } from "../scripts/lib/checks.mjs";
 
 test("summarizeEslintJson totals errors/warnings and fixables", () => {
@@ -41,4 +42,35 @@ test("summarizeEslintJson handles empty or invalid input", () => {
 test("parsePrettierList returns trimmed, non-empty lines", () => {
   assert.deepEqual(parsePrettierList("a.js\n  b.ts \n\n"), ["a.js", "b.ts"]);
   assert.deepEqual(parsePrettierList(""), []);
+});
+
+test("eslintManualIssues returns only messages without an auto-fix", () => {
+  const json = JSON.stringify([
+    {
+      filePath: "/repo/src/a.js",
+      messages: [
+        { ruleId: "no-unused-vars", line: 1, column: 7 },
+        { ruleId: "semi", line: 2, column: 10, fix: { range: [0, 1] } },
+      ],
+    },
+    {
+      filePath: "/repo/src/b.js",
+      messages: [{ ruleId: "no-undef", line: 3, column: 5 }],
+    },
+  ]);
+  assert.deepEqual(eslintManualIssues(json), [
+    {
+      filePath: "/repo/src/a.js",
+      line: 1,
+      column: 7,
+      ruleId: "no-unused-vars",
+    },
+    { filePath: "/repo/src/b.js", line: 3, column: 5, ruleId: "no-undef" },
+  ]);
+});
+
+test("eslintManualIssues handles empty or invalid input", () => {
+  assert.deepEqual(eslintManualIssues(""), []);
+  assert.deepEqual(eslintManualIssues("not json"), []);
+  assert.deepEqual(eslintManualIssues("[]"), []);
 });

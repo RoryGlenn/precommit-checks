@@ -28,10 +28,7 @@ test("shows commit:fix for fully auto-fixable warnings", (t) => {
   const output = `${result.stdout}${result.stderr}`;
 
   assert.match(output, /npm run commit:fix/);
-  assert.doesNotMatch(
-    output,
-    /Manual warnings above will still need your attention\./,
-  );
+  assert.doesNotMatch(output, /still need your attention/);
 });
 
 test("shows commit:fix and manual warning note for mixed safe warnings", (t) => {
@@ -45,10 +42,7 @@ test("shows commit:fix and manual warning note for mixed safe warnings", (t) => 
   const output = `${result.stdout}${result.stderr}`;
 
   assert.match(output, /npm run commit:fix/);
-  assert.match(
-    output,
-    /Manual warnings above will still need your attention\./,
-  );
+  assert.match(output, /Manual items above still need your attention\./);
 });
 
 test("suppresses commit:fix when tracked worktree changes would block amend", (t) => {
@@ -84,6 +78,7 @@ test("labels non-fixable ESLint issues as manual and omits commit:fix", (t) => {
   const output = `${result.stdout}${result.stderr}`;
 
   assert.match(output, /ESLint issue needing manual fixes/);
+  assert.match(output, /manual\.js.*no-unused-vars/);
   assert.doesNotMatch(output, /npm run commit:fix/);
 });
 

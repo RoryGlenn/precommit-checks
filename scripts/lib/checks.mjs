@@ -27,3 +27,29 @@ export function parsePrettierList(output) {
     .map((line) => line.trim())
     .filter(Boolean);
 }
+
+// Extracts the non-auto-fixable ESLint messages so the hook can point at the
+// exact file, location, and rule a developer must fix by hand. A message is
+// considered manual when ESLint did not attach an automatic `fix`.
+export function eslintManualIssues(stdout) {
+  try {
+    const parsed = JSON.parse(stdout || "[]");
+    const issues = [];
+    for (const fileResult of parsed) {
+      for (const message of fileResult.messages || []) {
+        if (message.fix) {
+          continue;
+        }
+        issues.push({
+          filePath: fileResult.filePath,
+          line: message.line,
+          column: message.column,
+          ruleId: message.ruleId,
+        });
+      }
+    }
+    return issues;
+  } catch {
+    return [];
+  }
+}
