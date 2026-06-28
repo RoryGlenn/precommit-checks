@@ -287,7 +287,7 @@ if (testRun) {
         : "Unable to run staged tests",
       detail: testRun.signal
         ? `No result within ${TOOL_TIMEOUT_MS / 1000}s`
-        : "Check precommitChecks.testCommand in package.json",
+        : "Check precommitChecks.testCommand in package.json", 
     });
   } else if ((testRun.status || 0) !== 0) {
     const testOutput = `${testRun.stdout || ""}${testRun.stderr || ""}`.trim();
