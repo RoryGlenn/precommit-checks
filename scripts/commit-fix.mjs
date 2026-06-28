@@ -1,44 +1,12 @@
 import { spawnSync } from "node:child_process";
-import boxen from "boxen";
 import pc from "picocolors";
-
-const isWindows = process.platform === "win32";
-
-function printBox(message, color = (value) => value, options = {}) {
-  console.log(
-    boxen(color(message), {
-      padding: 1,
-      borderStyle: "round",
-      margin: {
-        top: 1,
-        bottom: 1,
-      },
-      ...options,
-    }),
-  );
-}
-
-function run(command, args, options = {}) {
-  return spawnSync(command, args, {
-    encoding: "utf8",
-    shell: isWindows,
-    ...options,
-  });
-}
-
-function shortFileList(files, max = 3) {
-  const shown = files.slice(0, max);
-  if (shown.length === 0) {
-    return "";
-  }
-
-  const extra = files.length - shown.length;
-  if (extra > 0) {
-    return `${shown.join(", ")} (+${extra} more)`;
-  }
-
-  return shown.join(", ");
-}
+import { printBox } from "./lib/ui.mjs";
+import { isWindows, run } from "./lib/process.mjs";
+import {
+  codeFilePattern,
+  formatFilePattern,
+  shortFileList,
+} from "./lib/files.mjs";
 
 const headResult = run("git", ["rev-parse", "--verify", "HEAD"]);
 
@@ -169,15 +137,13 @@ const committedFiles = committedFilesResult.stdout
   .filter(Boolean);
 
 const committedJsFiles = committedFiles.filter((file) =>
-  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file),
+  codeFilePattern.test(file),
 );
 const committedFormatFiles = committedFiles.filter((file) =>
-  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts|json|css|scss|md|html|yml|yaml)$/.test(
-    file,
-  ),
+  formatFilePattern.test(file),
 );
 const formatOnlyFiles = committedFormatFiles.filter(
-  (file) => !/\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file),
+  (file) => !codeFilePattern.test(file),
 );
 const fixableFiles = Array.from(
   new Set([...committedJsFiles, ...committedFormatFiles]),

@@ -1,31 +1,13 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import boxen from "boxen";
 import pc from "picocolors";
-
-const isWindows = process.platform === "win32";
-
-function printBox(message, color = (value) => value, options = {}) {
-  console.log(
-    boxen(color(message), {
-      padding: 1,
-      borderStyle: "round",
-      margin: {
-        top: 1,
-        bottom: 1,
-      },
-      ...options,
-    }),
-  );
-}
-
-function run(command, args, options = {}) {
-  return spawnSync(command, args, {
-    encoding: "utf8",
-    shell: isWindows,
-    ...options,
-  });
-}
+import { printBox } from "./lib/ui.mjs";
+import { isWindows, run } from "./lib/process.mjs";
+import {
+  codeFilePattern,
+  formatFilePattern,
+  shortFileList,
+} from "./lib/files.mjs";
 
 function getIndexSnapshot(files) {
   if (files.length === 0) {
@@ -39,20 +21,6 @@ function getIndexSnapshot(files) {
   }
 
   return snapshotResult.stdout.trimEnd();
-}
-
-function shortFileList(files, max = 3) {
-  const shown = files.slice(0, max);
-  if (shown.length === 0) {
-    return "";
-  }
-
-  const extra = files.length - shown.length;
-  if (extra > 0) {
-    return `${shown.join(", ")} (+${extra} more)`;
-  }
-
-  return shown.join(", ");
 }
 
 const stagedResult = run("git", [
@@ -85,13 +53,9 @@ const stagedFiles = stagedResult.stdout
   .map((file) => file.trim())
   .filter(Boolean);
 
-const stagedJsFiles = stagedFiles.filter((file) =>
-  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file),
-);
+const stagedJsFiles = stagedFiles.filter((file) => codeFilePattern.test(file));
 const stagedFormatFiles = stagedFiles.filter((file) =>
-  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts|json|css|scss|md|html|yml|yaml)$/.test(
-    file,
-  ),
+  formatFilePattern.test(file),
 );
 const fixableFiles = Array.from(
   new Set([...stagedJsFiles, ...stagedFormatFiles]),
