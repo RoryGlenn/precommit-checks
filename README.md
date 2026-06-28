@@ -26,6 +26,7 @@ This repo contains a non-blocking pre-commit flow for JavaScript projects using 
 npm run test:precommit  # run the unified hook script directly
 npm run fix:staged      # apply staged-only ESLint/Prettier fixes
 npm run commit:fix      # apply automatic fixes to the latest clean commit and amend it
+npm test                 # run automated hook behavior tests
 npm run lint            # lint the full repo
 npm run format:check    # check formatting across the repo
 ```

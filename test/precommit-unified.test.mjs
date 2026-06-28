@@ -1,0 +1,69 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import path from "node:path";
+import {
+  cleanupTempRepo,
+  createTempRepo,
+  run,
+  writeFile,
+} from "./helpers/temp-repo.mjs";
+
+function runHook(tempDir) {
+  return run(
+    "node",
+    [path.join(tempDir, "scripts", "precommit-unified.mjs")],
+    tempDir,
+  );
+}
+
+test("shows commit:fix for fully auto-fixable warnings", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "format-only.json"), '{"alpha":1}\n');
+  run("git", ["add", "src/format-only.json"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /npm run commit:fix/);
+  assert.doesNotMatch(
+    output,
+    /Manual warnings above will still need your attention\./,
+  );
+});
+
+test("shows commit:fix and manual warning note for mixed safe warnings", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "mixed.js"), "const value=1\n");
+  run("git", ["add", "src/mixed.js"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /npm run commit:fix/);
+  assert.match(
+    output,
+    /Manual warnings above will still need your attention\./,
+  );
+});
+
+test("suppresses commit:fix when tracked worktree changes would block amend", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "README.md"), "dirty\n");
+  writeFile(path.join(tempDir, "src", "format-only.json"), '{"alpha":1}\n');
+  run("git", ["add", "src/format-only.json"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /npm run commit:fix/);
+  assert.match(
+    output,
+    /Other tracked changes will still be present after commit/,
+  );
+});
