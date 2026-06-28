@@ -253,3 +253,15 @@ test("honors package.json precommitChecks.testExempt globs", (t) => {
 
   assert.doesNotMatch(output, /missing unit tests/);
 });
+
+test("shows an info message when nothing is staged", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  // Clean working tree, nothing staged.
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /No staged files to check\./);
+  assert.doesNotMatch(output, /All pre-commit checks passed/);
+});

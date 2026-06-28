@@ -41,6 +41,23 @@ const stagedFiles = gitFiles.stdout
   .map((file) => file.trim())
   .filter(Boolean);
 
+if (stagedFiles.length === 0) {
+  printBox(
+    [
+      pc.bold("No staged files to check."),
+      "",
+      pc.dim("Stage changes with git add before committing."),
+    ].join("\n"),
+    pc.cyan,
+    {
+      title: "info",
+      titleAlignment: "center",
+    },
+  );
+
+  process.exit(0);
+}
+
 const unstagedFilesResult = spawnSync("git", ["diff", "--name-only"], {
   encoding: "utf8",
   shell: isWindows,
