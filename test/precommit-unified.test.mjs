@@ -265,3 +265,78 @@ test("shows an info message when nothing is staged", (t) => {
   assert.match(output, /No staged files to check\./);
   assert.doesNotMatch(output, /All pre-commit checks passed/);
 });
+
+test("shows info when only non-checkable files are staged", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "assets", "logo.png"), "not really binary\n");
+  run("git", ["add", "assets/logo.png"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /No lintable or formattable files staged\./);
+  assert.doesNotMatch(output, /All pre-commit checks passed/);
+});
+
+test("distinguishes a deletion-only commit from nothing staged", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  run("git", ["rm", "README.md"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /committed as-is/);
+  assert.doesNotMatch(output, /Stage changes with git add/);
+});
+
+test("runs staged tests and warns when they fail (opt-in)", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  const pkg = JSON.parse(readFile(tempDir, "package.json"));
+  pkg.precommitChecks = { runStagedTests: true };
+  writeFile(
+    path.join(tempDir, "package.json"),
+    `${JSON.stringify(pkg, null, 2)}\n`,
+  );
+
+  writeFile(
+    path.join(tempDir, "test", "thing.test.mjs"),
+    'import test from "node:test";\n' +
+      'import assert from "node:assert/strict";\n' +
+      'test("fails", () => assert.equal(1, 2));\n',
+  );
+  run("git", ["add", "test/thing.test.mjs"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /staged test file.*failing/);
+});
+
+test("runs staged tests and stays clean when they pass (opt-in)", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  const pkg = JSON.parse(readFile(tempDir, "package.json"));
+  pkg.precommitChecks = { runStagedTests: true };
+  writeFile(
+    path.join(tempDir, "package.json"),
+    `${JSON.stringify(pkg, null, 2)}\n`,
+  );
+
+  writeFile(
+    path.join(tempDir, "test", "thing.test.mjs"),
+    'import test from "node:test";\ntest("passes", () => {});\n',
+  );
+  run("git", ["add", "test/thing.test.mjs"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /failing/);
+});

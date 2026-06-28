@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { loadPrecommitConfig } from "./config.mjs";
 
 export const codeExtensions = [
   "js",
@@ -92,18 +93,13 @@ export function globToRegExp(glob) {
 }
 
 function loadTestExemptGlobs() {
-  try {
-    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-    const list = pkg && pkg.precommitChecks && pkg.precommitChecks.testExempt;
-    if (!Array.isArray(list)) {
-      return [];
-    }
-    return list
-      .filter((entry) => typeof entry === "string")
-      .map((entry) => globToRegExp(entry));
-  } catch {
+  const list = loadPrecommitConfig().testExempt;
+  if (!Array.isArray(list)) {
     return [];
   }
+  return list
+    .filter((entry) => typeof entry === "string")
+    .map((entry) => globToRegExp(entry));
 }
 
 const testExemptGlobs = loadTestExemptGlobs();

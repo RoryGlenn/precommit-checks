@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import pc from "picocolors";
 import { printBox } from "./lib/ui.mjs";
-import { isWindows, run } from "./lib/process.mjs";
+import { isWindows, run, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 import {
   codeFilePattern,
   formatFilePattern,
@@ -174,6 +174,7 @@ if (committedJsFiles.length > 0) {
     {
       stdio: "inherit",
       shell: isWindows,
+      timeout: TOOL_TIMEOUT_MS,
     },
   );
 
@@ -189,6 +190,7 @@ if (formatOnlyFiles.length > 0) {
     {
       stdio: "inherit",
       shell: isWindows,
+      timeout: TOOL_TIMEOUT_MS,
     },
   );
 
@@ -287,6 +289,7 @@ if (changedFiles.length === 0) {
 const amendResult = spawnSync("git", ["commit", "--amend", "--no-edit"], {
   stdio: "inherit",
   shell: isWindows,
+  timeout: TOOL_TIMEOUT_MS,
 });
 
 if (amendResult.error || (amendResult.status || 0) !== 0) {

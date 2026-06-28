@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { isWindows, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 
-const isWindows = process.platform === "win32";
 const files = process.argv.slice(2).filter(Boolean);
 
 if (files.length === 0) {
@@ -15,6 +15,7 @@ const eslintResult = spawnSync(
   {
     stdio: "inherit",
     shell: isWindows,
+    timeout: TOOL_TIMEOUT_MS,
   },
 );
 
@@ -28,6 +29,7 @@ const prettierResult = spawnSync(
   {
     stdio: "inherit",
     shell: isWindows,
+    timeout: TOOL_TIMEOUT_MS,
   },
 );
 

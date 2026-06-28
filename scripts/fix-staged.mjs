@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import pc from "picocolors";
 import { printBox } from "./lib/ui.mjs";
-import { isWindows, run } from "./lib/process.mjs";
+import { isWindows, run, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 import {
   codeFilePattern,
   formatFilePattern,
@@ -159,6 +159,7 @@ const result = spawnSync(
   {
     stdio: "inherit",
     shell: isWindows,
+    timeout: TOOL_TIMEOUT_MS,
   },
 );
 

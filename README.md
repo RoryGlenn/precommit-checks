@@ -41,6 +41,32 @@ To exempt additional paths, add glob patterns under `precommitChecks.testExempt`
 }
 ```
 
+## Running staged tests (opt-in)
+
+By default the hook only checks for _missing_ tests; it does not run them. To also run the tests relevant to a commit, enable it in `package.json`:
+
+```json
+{
+  "precommitChecks": {
+    "runStagedTests": true,
+    "testCommand": ["node", "--test"]
+  }
+}
+```
+
+When enabled, the hook runs `testCommand` against the staged test files plus the tests it can find for staged source files. Failures are reported as an advisory warning (the commit still continues). `testCommand` is optional and defaults to `node --test`.
+
+> Note: enabling `runStagedTests` executes a repo-defined command (`testCommand`) on every commit, just like `lint-staged`. Only enable it in repositories you trust. Spawned tools are capped by a timeout so a hung command can't wedge a commit.
+
+## Message states
+
+The hook prints one box per commit:
+
+- **success** — staged files were checked and look clean
+- **warning** — advisory issues found (lint, formatting, missing/failing tests); the commit continues
+- **info** — nothing to check: no staged files, only a deletion, or only non-code/non-format files were staged
+- **error** — the hook could not inspect Git or run a tool
+
 ## Safety model
 
 - Commits are advisory: the hook reports issues but exits successfully.
