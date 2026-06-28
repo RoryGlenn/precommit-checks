@@ -47,7 +47,9 @@ if (headResult.error || headResult.status !== 0) {
     [
       pc.bold("Unable to inspect the latest commit."),
       "",
-      pc.dim("Check that Git is available and the current directory has at least one commit."),
+      pc.dim(
+        "Check that Git is available and the current directory has at least one commit.",
+      ),
     ].join("\n"),
     pc.red,
     {
@@ -71,7 +73,9 @@ if (
     [
       pc.bold("Unable to inspect the current working tree."),
       "",
-      pc.dim("Check that Git is available and the working tree can be inspected."),
+      pc.dim(
+        "Check that Git is available and the working tree can be inspected.",
+      ),
     ].join("\n"),
     pc.red,
     {
@@ -140,14 +144,18 @@ const committedFiles = committedFilesResult.stdout
   .map((file) => file.trim())
   .filter(Boolean);
 
-const committedJsFiles = committedFiles.filter((file) => /\.(js|jsx|mjs)$/.test(file));
+const committedJsFiles = committedFiles.filter((file) =>
+  /\.(js|jsx|mjs)$/.test(file),
+);
 const committedFormatFiles = committedFiles.filter((file) =>
   /\.(js|jsx|mjs|json|css|scss|md|html|yml|yaml)$/.test(file),
 );
 const formatOnlyFiles = committedFormatFiles.filter(
   (file) => !/\.(js|jsx|mjs)$/.test(file),
 );
-const fixableFiles = Array.from(new Set([...committedJsFiles, ...committedFormatFiles]));
+const fixableFiles = Array.from(
+  new Set([...committedJsFiles, ...committedFormatFiles]),
+);
 
 if (fixableFiles.length === 0) {
   printBox(
@@ -215,7 +223,13 @@ if (addResult.error || addResult.status !== 0) {
   process.exit(1);
 }
 
-const stagedFixResult = run("git", ["diff", "--cached", "--name-only", "--", ...fixableFiles]);
+const stagedFixResult = run("git", [
+  "diff",
+  "--cached",
+  "--name-only",
+  "--",
+  ...fixableFiles,
+]);
 
 if (stagedFixResult.error || stagedFixResult.status !== 0) {
   printBox(
@@ -247,7 +261,9 @@ if (changedFiles.length === 0) {
         pc.bold("Manual attention still needed."),
         "",
         pc.dim("No automatic changes were added to the latest commit."),
-        pc.dim("Review the ESLint or Prettier output above and amend manually after fixing."),
+        pc.dim(
+          "Review the ESLint or Prettier output above and amend manually after fixing.",
+        ),
       ].join("\n"),
       pc.yellow,
       {
@@ -262,7 +278,9 @@ if (changedFiles.length === 0) {
     [
       pc.bold("Latest commit already clean."),
       "",
-      pc.dim(`Checked ${fixableFiles.length} file${fixableFiles.length === 1 ? "" : "s"} from the latest commit.`),
+      pc.dim(
+        `Checked ${fixableFiles.length} file${fixableFiles.length === 1 ? "" : "s"} from the latest commit.`,
+      ),
       pc.dim(shortFileList(fixableFiles)),
     ].join("\n"),
     pc.green,
@@ -282,9 +300,13 @@ const amendResult = spawnSync("git", ["commit", "--amend", "--no-edit"], {
 if (amendResult.error || (amendResult.status || 0) !== 0) {
   printBox(
     [
-      pc.bold("Automatic fixes were staged, but the latest commit could not be amended."),
+      pc.bold(
+        "Automatic fixes were staged, but the latest commit could not be amended.",
+      ),
       "",
-      pc.dim("Run git commit --amend --no-edit manually after reviewing the staged changes."),
+      pc.dim(
+        "Run git commit --amend --no-edit manually after reviewing the staged changes.",
+      ),
     ].join("\n"),
     pc.red,
     {
@@ -318,7 +340,9 @@ printBox(
   [
     pc.bold("Latest commit amended with automatic fixes."),
     "",
-    pc.dim(`Updated ${changedFiles.length} file${changedFiles.length === 1 ? "" : "s"} from the latest commit.`),
+    pc.dim(
+      `Updated ${changedFiles.length} file${changedFiles.length === 1 ? "" : "s"} from the latest commit.`,
+    ),
     pc.dim(shortFileList(changedFiles)),
   ].join("\n"),
   pc.green,

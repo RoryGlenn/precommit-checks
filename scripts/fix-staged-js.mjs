@@ -11,14 +11,7 @@ let hasRemainingIssues = false;
 
 const eslintResult = spawnSync(
   "npx",
-  [
-    "eslint",
-    "--cache",
-    "--cache-strategy",
-    "content",
-    "--fix",
-    ...files,
-  ],
+  ["eslint", "--cache", "--cache-strategy", "content", "--fix", ...files],
   {
     stdio: "inherit",
     shell: isWindows,

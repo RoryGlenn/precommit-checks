@@ -67,7 +67,9 @@ if (stagedResult.error || stagedResult.status !== 0) {
     [
       pc.bold("Unable to inspect staged files."),
       "",
-      pc.dim("Check that Git is available and the current directory is a repository."),
+      pc.dim(
+        "Check that Git is available and the current directory is a repository.",
+      ),
     ].join("\n"),
     pc.red,
     {
@@ -83,18 +85,24 @@ const stagedFiles = stagedResult.stdout
   .map((file) => file.trim())
   .filter(Boolean);
 
-const stagedJsFiles = stagedFiles.filter((file) => /\.(js|jsx|mjs)$/.test(file));
+const stagedJsFiles = stagedFiles.filter((file) =>
+  /\.(js|jsx|mjs)$/.test(file),
+);
 const stagedFormatFiles = stagedFiles.filter((file) =>
   /\.(js|jsx|mjs|json|css|scss|md|html|yml|yaml)$/.test(file),
 );
-const fixableFiles = Array.from(new Set([...stagedJsFiles, ...stagedFormatFiles]));
+const fixableFiles = Array.from(
+  new Set([...stagedJsFiles, ...stagedFormatFiles]),
+);
 
 if (fixableFiles.length === 0) {
   printBox(
     [
       pc.bold("No staged files to fix."),
       "",
-      pc.dim("Stage a JS, JSON, CSS, Markdown, HTML, or YAML file and run npm run fix:staged again."),
+      pc.dim(
+        "Stage a JS, JSON, CSS, Markdown, HTML, or YAML file and run npm run fix:staged again.",
+      ),
     ].join("\n"),
     pc.cyan,
     {
@@ -112,7 +120,9 @@ if (unstagedResult.error || unstagedResult.status !== 0) {
     [
       pc.bold("Unable to inspect unstaged files."),
       "",
-      pc.dim("Check that Git is available and the working tree can be inspected."),
+      pc.dim(
+        "Check that Git is available and the working tree can be inspected.",
+      ),
     ].join("\n"),
     pc.red,
     {
@@ -130,8 +140,12 @@ const unstagedFiles = new Set(
     .filter(Boolean),
 );
 
-const partiallyStagedFiles = fixableFiles.filter((file) => unstagedFiles.has(file));
-const missingWorkingTreeFiles = fixableFiles.filter((file) => !fs.existsSync(file));
+const partiallyStagedFiles = fixableFiles.filter((file) =>
+  unstagedFiles.has(file),
+);
+const missingWorkingTreeFiles = fixableFiles.filter(
+  (file) => !fs.existsSync(file),
+);
 
 if (partiallyStagedFiles.length > 0) {
   printBox(
@@ -175,12 +189,7 @@ const indexSnapshotBefore = getIndexSnapshot(fixableFiles);
 
 const result = spawnSync(
   "npx",
-  [
-    "lint-staged",
-    "--continue-on-error",
-    "--no-revert",
-    "--quiet",
-  ],
+  ["lint-staged", "--continue-on-error", "--no-revert", "--quiet"],
   {
     stdio: "inherit",
     shell: isWindows,
@@ -213,7 +222,9 @@ if ((result.status ?? 1) === 0) {
       : null;
 
   const summaryTitle =
-    indexChanged === true ? "Staged fixes applied." : "Staged files already clean.";
+    indexChanged === true
+      ? "Staged fixes applied."
+      : "Staged files already clean.";
   const summaryDetail =
     indexChanged === true
       ? `Refreshed the index for ${fixableFiles.length} staged file${fixableFiles.length === 1 ? "" : "s"}.`
@@ -240,7 +251,9 @@ printBox(
     pc.bold("Manual attention still needed."),
     "",
     pc.dim("Available fixes were applied and the index was refreshed."),
-    pc.dim("Review the ESLint or Prettier output above, then commit again when ready."),
+    pc.dim(
+      "Review the ESLint or Prettier output above, then commit again when ready.",
+    ),
   ].join("\n"),
   pc.yellow,
   {

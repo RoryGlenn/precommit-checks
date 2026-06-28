@@ -264,17 +264,33 @@ if (issues.length > 0) {
 
   messageLines.push("");
   if (canAmendLatestCommit) {
-    messageLines.push(pc.dim("After this commit completes, apply automatic fixes and amend it:"));
+    messageLines.push(
+      pc.dim(
+        "After this commit completes, apply automatic fixes and amend it:",
+      ),
+    );
     messageLines.push(`  ${pc.bold("npm run commit:fix")}`);
   } else if (hasFixableIssue) {
     if (hasNonFixableIssue) {
-      messageLines.push(pc.dim("Some warnings still require manual work, so no automatic post-commit command is shown."));
+      messageLines.push(
+        pc.dim(
+          "Some warnings still require manual work, so no automatic post-commit command is shown.",
+        ),
+      );
     }
 
     if (!canInspectUnstagedFiles) {
-      messageLines.push(pc.dim("The working tree could not be inspected for a safe post-commit amend."));
+      messageLines.push(
+        pc.dim(
+          "The working tree could not be inspected for a safe post-commit amend.",
+        ),
+      );
     } else if (unstagedTrackedFiles.length > 0) {
-      messageLines.push(pc.dim("Other tracked changes will still be present after commit, so no automatic amend command is shown."));
+      messageLines.push(
+        pc.dim(
+          "Other tracked changes will still be present after commit, so no automatic amend command is shown.",
+        ),
+      );
       messageLines.push(`  ${pc.dim(shortFileList(unstagedTrackedFiles))}`);
     }
   } else {

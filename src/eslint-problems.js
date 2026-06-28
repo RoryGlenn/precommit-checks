@@ -136,7 +136,7 @@ for (let i = 0; i < 4; i += 1) {
   const loopUnusedA = i;
   const loopUnusedB = i * 2;
 }
-      
+
 if (unusedVar) {
   const conditionalUnused = "branch";
 }
