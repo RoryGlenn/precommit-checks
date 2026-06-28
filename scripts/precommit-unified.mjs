@@ -46,6 +46,90 @@ function isInTestDir(file) {
   return /(^|\/)(test|tests|__tests__|__mocks__)\//.test(file);
 }
 
+function isConfigFile(file) {
+  const base = path.basename(file);
+  return base.startsWith(".") || /\.config\.[^.]+$/.test(base);
+}
+
+const storyFilePattern = /\.stories\.[^.]+$/;
+const generatedFilePattern = /\.generated\.[^.]+$/;
+const generatedDirPattern = /(^|\/)(generated|__generated__)\//;
+
+function isStoryFile(file) {
+  return storyFilePattern.test(path.basename(file));
+}
+
+function isGeneratedFile(file) {
+  return (
+    generatedDirPattern.test(file) ||
+    generatedFilePattern.test(path.basename(file))
+  );
+}
+
+function globToRegExp(glob) {
+  let pattern = "";
+  let i = 0;
+  while (i < glob.length) {
+    const char = glob[i];
+    if (char === "*" && glob[i + 1] === "*") {
+      i += 2;
+      if (glob[i] === "/") {
+        pattern += "(?:.*/)?";
+        i += 1;
+      } else {
+        pattern += ".*";
+      }
+    } else if (char === "*") {
+      pattern += "[^/]*";
+      i += 1;
+    } else if (char === "?") {
+      pattern += "[^/]";
+      i += 1;
+    } else if (/[.+^${}()|[\]\\]/.test(char)) {
+      pattern += `\\${char}`;
+      i += 1;
+    } else {
+      pattern += char;
+      i += 1;
+    }
+  }
+  return new RegExp(`^${pattern}$`);
+}
+
+function loadTestExemptGlobs() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    const list = pkg && pkg.precommitChecks && pkg.precommitChecks.testExempt;
+    if (!Array.isArray(list)) {
+      return [];
+    }
+    return list
+      .filter((entry) => typeof entry === "string")
+      .map((entry) => globToRegExp(entry));
+  } catch {
+    return [];
+  }
+}
+
+const testExemptGlobs = loadTestExemptGlobs();
+
+function isUserExempt(file) {
+  return testExemptGlobs.some((pattern) => pattern.test(file));
+}
+
+// Staged code files we never expect to ship with a dedicated unit test.
+function isTestExemptFile(file) {
+  return (
+    isTestFile(file) ||
+    isInTestDir(file) ||
+    isConfigFile(file) ||
+    declarationFilePattern.test(file) ||
+    isStoryFile(file) ||
+    isGeneratedFile(file) ||
+    isUserExempt(file)
+  );
+}
+
 function findTestFile(file) {
   const dirname = path.dirname(file);
   const basename = path.basename(file, path.extname(file));
@@ -139,11 +223,7 @@ let formatIssueCount = 0;
 
 if (stagedJsFiles.length > 0) {
   const missingTests = stagedJsFiles.filter(
-    (file) =>
-      !isTestFile(file) &&
-      !isInTestDir(file) &&
-      !declarationFilePattern.test(file) &&
-      !findTestFile(file),
+    (file) => !isTestExemptFile(file) && !findTestFile(file),
   );
 
   if (missingTests.length > 0) {

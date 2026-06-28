@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   cleanupTempRepo,
   createTempRepo,
+  readFile,
   run,
   writeFile,
 } from "./helpers/temp-repo.mjs";
@@ -175,4 +176,80 @@ test("handles a mixed JS and TS commit together", (t) => {
   assert.match(output, /2 staged source files missing unit tests/);
   assert.match(output, /src\/a\.js/);
   assert.match(output, /src\/b\.ts/);
+});
+
+test("does not flag config files for missing tests", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "app.config.js"), "export default {};\n");
+  run("git", ["add", "app.config.js"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
+});
+
+test("does not flag Storybook story files for missing tests", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(
+    path.join(tempDir, "src", "Button.stories.js"),
+    "export default {};\n",
+  );
+  run("git", ["add", "src/Button.stories.js"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
+});
+
+test("does not flag generated files for missing tests", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(
+    path.join(tempDir, "src", "api.generated.ts"),
+    "export const api = 1;\n",
+  );
+  writeFile(
+    path.join(tempDir, "src", "generated", "schema.ts"),
+    "export const schema = 1;\n",
+  );
+  run(
+    "git",
+    ["add", "src/api.generated.ts", "src/generated/schema.ts"],
+    tempDir,
+  );
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
+});
+
+test("honors package.json precommitChecks.testExempt globs", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  const pkg = JSON.parse(readFile(tempDir, "package.json"));
+  pkg.precommitChecks = { testExempt: ["src/legacy/**"] };
+  writeFile(
+    path.join(tempDir, "package.json"),
+    `${JSON.stringify(pkg, null, 2)}\n`,
+  );
+
+  writeFile(
+    path.join(tempDir, "src", "legacy", "old.js"),
+    "export const old = 1;\n",
+  );
+  run("git", ["add", "src/legacy/old.js"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
 });

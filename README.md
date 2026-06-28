@@ -19,6 +19,28 @@ This repo contains a non-blocking pre-commit flow for JavaScript and TypeScript 
 - The unit-test heuristic recognizes matching tests in the same directory, an adjacent `__tests__/`, or a top-level `test/`/`tests/` directory (e.g. `src/foo.ts` is satisfied by `test/foo.test.ts`).
 - **Prerequisite for real TypeScript:** these scripts delegate linting to your project's own ESLint config, so your `eslint.config.js` must be set up for TypeScript (e.g. [`typescript-eslint`](https://typescript-eslint.io/)). Prettier formats TypeScript out of the box. Without a TypeScript-aware ESLint parser, ESLint will report parse errors on real type syntax.
 
+## Unit-test heuristics
+
+The hook flags staged code files that have no matching test, but it skips files that don't normally need one:
+
+- test files themselves (`*.test.*`, `*.spec.*`) and anything under `test/`, `tests/`, `__tests__/`, or `__mocks__/`
+- config files (`*.config.*` and dotfile configs like `.eslintrc.cjs`)
+- type declarations (`*.d.ts`, `*.d.mts`, `*.d.cts`)
+- Storybook stories (`*.stories.*`)
+- generated code (`*.generated.*`, or files under `generated/` / `__generated__/`)
+
+A matching test is found when it sits next to the file, in an adjacent `__tests__/`, or in a top-level `test/` / `tests/` directory (so `src/foo.ts` is satisfied by `test/foo.test.ts`).
+
+To exempt additional paths, add glob patterns under `precommitChecks.testExempt` in `package.json` (supports `*`, `**`, and `?`):
+
+```json
+{
+  "precommitChecks": {
+    "testExempt": ["src/legacy/**", "**/*.pb.ts"]
+  }
+}
+```
+
 ## Safety model
 
 - Commits are advisory: the hook reports issues but exits successfully.
