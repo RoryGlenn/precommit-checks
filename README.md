@@ -2,6 +2,60 @@
 
 This repo contains a non-blocking pre-commit flow for JavaScript and TypeScript projects using Husky, lint-staged, ESLint, and Prettier. It works on pure JS, pure TS, and mixed JS/TS codebases.
 
+**Advisory by design:** the hook reports issues but never blocks a commit, never discards unstaged work, and never rewrites already-pushed history.
+
+## Requirements
+
+- **Node.js >= 21** — the scripts use modern ESM features and the built-in `node --test` runner.
+- Dev dependencies in your project: `husky`, `lint-staged`, `eslint`, `prettier`, plus `boxen` and `picocolors` for the boxed output.
+- An ESLint flat config (`eslint.config.js`) in your project. For TypeScript, it must be TypeScript-aware (see [TypeScript and mixed projects](#typescript-and-mixed-projects)).
+
+## Installation
+
+1. Install the dev dependencies:
+
+   ```bash
+   npm install -D husky lint-staged eslint prettier boxen picocolors
+   ```
+
+2. Copy the `scripts/` directory (including `scripts/lib/`) into your project root.
+
+3. Enable Husky and register the hook:
+
+   ```bash
+   npx husky init
+   echo "node scripts/precommit-unified.mjs" > .husky/pre-commit
+   ```
+
+   `npx husky init` adds a `"prepare": "husky"` script, so the hook is installed automatically on every `npm install`.
+
+4. Add the npm scripts and configuration to your `package.json`:
+
+   ```json
+   {
+     "scripts": {
+       "commit:fix": "node scripts/commit-fix.mjs",
+       "fix:staged": "node scripts/fix-staged.mjs",
+       "test:precommit": "node scripts/precommit-unified.mjs"
+     },
+     "lint-staged": {
+       "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": ["node scripts/fix-staged-js.mjs"],
+       "*.{json,css,scss,md,html,yml,yaml}": [
+         "prettier --write --ignore-unknown"
+       ]
+     }
+   }
+   ```
+
+5. Add the caches to your `.gitignore`:
+
+   ```gitignore
+   .eslintcache
+   .prettiercache
+   ```
+
+Your next `git commit` will run the advisory checks.
+
 ## Active flow
 
 - `.husky/pre-commit` runs `node scripts/precommit-unified.mjs`.
@@ -74,6 +128,18 @@ The hook prints one box per commit:
 - If a file has both staged and unstaged changes, `npm run fix:staged` refuses to run for safety.
 - `npm run commit:fix` only runs when tracked staged and unstaged changes are absent, so it can safely amend the latest commit.
 - If ESLint cannot fix everything automatically, available fixes are still applied and re-staged, and the command exits non-zero so the remaining issues are visible.
+
+## Performance
+
+The hook is tuned to stay fast even on slow machines:
+
+- ESLint, Prettier, and (opt-in) staged tests run **concurrently**.
+- Tools run directly through the project's local Node binaries, skipping `npx` resolution overhead.
+- ESLint (`.eslintcache`) and Prettier (`.prettiercache`) caches speed up repeated runs. Both are written to the project root and should be gitignored.
+
+## Continuous integration
+
+These scripts are Git-hook tooling, so disable Husky in CI with `HUSKY=0` to avoid installing hooks during `npm ci`. This project's own workflow runs `npm ci`, `npm run lint`, `npm run format:check`, and `npm test` on Node 21, 22, and 24.
 
 ## Commands
 
