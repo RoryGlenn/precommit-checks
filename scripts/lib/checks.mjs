@@ -60,8 +60,10 @@ export function eslintManualIssues(stdout) {
 // custom pushTestCommand running jest/vitest), so callers can fall back to a
 // generic message.
 export function parseNodeTestSummary(output) {
-  const pass = (output || "").match(/^[#ℹ\s]*pass\s+(\d+)\s*$/m);
-  const fail = (output || "").match(/^[#ℹ\s]*fail\s+(\d+)\s*$/m);
+  // Strip ANSI color codes so colored reporter output still parses.
+  const clean = (output || "").replace(/\u001b\[[0-9;]*m/g, "");
+  const pass = clean.match(/^[#ℹ\s]*pass\s+(\d+)\s*$/m);
+  const fail = clean.match(/^[#ℹ\s]*fail\s+(\d+)\s*$/m);
   if (!pass && !fail) {
     return null;
   }

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox } from "./lib/ui.mjs";
 import { isWindows, run, spawnAsync, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
@@ -101,17 +104,51 @@ console.log("");
 const env = { ...process.env };
 delete env.NODE_TEST_CONTEXT;
 
-// Stream the test output live (echo) while also capturing it, so we can render
-// a parsed pass/fail summary in the verdict box for a consistent, scannable end.
-const result = await spawnAsync(fullCommand[0], fullCommand.slice(1), {
-  shell: isWindows,
-  env,
-  echo: true,
-});
+// When the runner is `node --test`, keep this terminal attached so its colored
+// spec reporter streams through unchanged, and capture the pass/fail counts via
+// a second TAP reporter written to a temp file. For any other (custom) runner we
+// fall back to a tee: stream its output live while capturing it for a best-effort
+// summary.
+const isNodeTest =
+  /(^|[/\\])node(\.exe)?$/i.test(testCommand[0]) &&
+  testCommand.includes("--test");
+
+let result;
+let summary = null;
+
+if (isNodeTest) {
+  const tapFile = path.join(os.tmpdir(), `prepush-tap-${process.pid}.tap`);
+  const args = [
+    ...testCommand.slice(1),
+    "--test-reporter=spec",
+    "--test-reporter-destination=stdout",
+    "--test-reporter=tap",
+    `--test-reporter-destination=${tapFile}`,
+    ...testFiles,
+  ];
+  result = await spawnAsync(testCommand[0], args, {
+    shell: isWindows,
+    env,
+    stdio: "inherit",
+  });
+  try {
+    summary = parseNodeTestSummary(fs.readFileSync(tapFile, "utf8"));
+  } catch {
+    summary = null;
+  } finally {
+    fs.rmSync(tapFile, { force: true });
+  }
+} else {
+  result = await spawnAsync(fullCommand[0], fullCommand.slice(1), {
+    shell: isWindows,
+    env,
+    echo: true,
+  });
+  summary = parseNodeTestSummary(`${result.stdout}\n${result.stderr}`);
+}
 
 console.log("");
 
-const summary = parseNodeTestSummary(`${result.stdout}\n${result.stderr}`);
 const summaryLines = summary
   ? ["", pc.dim(`${summary.passed} passed, ${summary.failed} failed`)]
   : [];
