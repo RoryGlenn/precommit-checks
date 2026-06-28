@@ -16,6 +16,14 @@ function printBox(message, color = (value) => value, options = {}) {
   );
 }
 
+function quoteForShell(value) {
+  if (process.platform === "win32") {
+    return `"${value.replace(/"/g, '\\"')}"`;
+  }
+
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
 const gitFiles = spawnSync(
   "git",
   ["diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
@@ -25,10 +33,15 @@ const gitFiles = spawnSync(
   },
 );
 
-const stagedJsFiles = gitFiles.stdout
+const stagedFiles = gitFiles.stdout
   .split("\n")
   .map((file) => file.trim())
-  .filter((file) => file && /\.(js|jsx|mjs)$/.test(file));
+  .filter(Boolean);
+
+const stagedJsFiles = stagedFiles.filter((file) => /\.(js|jsx|mjs)$/.test(file));
+const stagedFormatFiles = stagedFiles.filter((file) =>
+  /\.(js|jsx|mjs|json|css|scss|md|html|yml|yaml)$/.test(file),
+);
 
 let issues = [];
 let eslintIssueCount = 0;
@@ -145,14 +158,32 @@ if (issues.length > 0) {
     }
   });
 
+  const hasLintIssue = issues.some((issue) => issue.type === "lint");
+  const hasFormatIssue = issues.some((issue) => issue.type === "format");
+
+  const eslintFixCommand =
+    hasLintIssue && stagedJsFiles.length > 0
+      ? `npx eslint --fix ${stagedJsFiles.map(quoteForShell).join(" ")}`
+      : null;
+  const prettierFixCommand =
+    hasFormatIssue && stagedFormatFiles.length > 0
+      ? `npx prettier --write ${stagedFormatFiles.map(quoteForShell).join(" ")}`
+      : null;
+
   messageLines.push("");
-  messageLines.push(pc.dim("Run when ready:"));
-  messageLines.push(
-    `  ${pc.bold("npm run lint:fix   ")} ${pc.dim("# Fix ESLint issues")}`,
-  );
-  messageLines.push(
-    `  ${pc.bold("npm run format     ")} ${pc.dim("# Fix formatting")}`,
-  );
+  messageLines.push(pc.dim("Run on staged files only:"));
+
+  if (eslintFixCommand) {
+    messageLines.push(`  ${pc.bold(eslintFixCommand)}`);
+  }
+
+  if (prettierFixCommand) {
+    messageLines.push(`  ${pc.bold(prettierFixCommand)}`);
+  }
+
+  if (!eslintFixCommand && !prettierFixCommand) {
+    messageLines.push(`  ${pc.dim("No automatic fix command for these issues.")}`);
+  }
 } else {
   color = pc.green;
   title = "success";
