@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
-import { isWindows, run, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
+import { isWindows, run, runTool, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 import {
   codeFilePattern,
   formatFilePattern,
@@ -142,13 +142,21 @@ if (committedJsFiles.length > 0) {
 }
 
 if (formatOnlyFiles.length > 0) {
-  const prettierResult = spawnSync(
-    "npx",
-    ["prettier", "--write", "--ignore-unknown", "--", ...formatOnlyFiles],
+  const prettierResult = runTool(
+    "prettier",
+    [
+      "--cache",
+      "--cache-location",
+      ".prettiercache",
+      "--cache-strategy",
+      "content",
+      "--write",
+      "--ignore-unknown",
+      "--",
+      ...formatOnlyFiles,
+    ],
     {
       stdio: "inherit",
-      shell: isWindows,
-      timeout: TOOL_TIMEOUT_MS,
     },
   );
 

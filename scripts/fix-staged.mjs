@@ -1,8 +1,7 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
-import { isWindows, run, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
+import { run, runTool } from "./lib/process.mjs";
 import {
   codeFilePattern,
   formatFilePattern,
@@ -118,13 +117,11 @@ if (missingWorkingTreeFiles.length > 0) {
 
 const indexSnapshotBefore = getIndexSnapshot(fixableFiles);
 
-const result = spawnSync(
-  "npx",
-  ["lint-staged", "--continue-on-error", "--no-revert", "--quiet"],
+const result = runTool(
+  "lint-staged",
+  ["--continue-on-error", "--no-revert", "--quiet"],
   {
     stdio: "inherit",
-    shell: isWindows,
-    timeout: TOOL_TIMEOUT_MS,
   },
 );
 

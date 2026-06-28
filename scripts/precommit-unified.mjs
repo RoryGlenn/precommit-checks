@@ -1,7 +1,12 @@
 import { spawnSync } from "node:child_process";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
-import { isWindows, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
+import {
+  isWindows,
+  TOOL_TIMEOUT_MS,
+  toolInvocation,
+  spawnAsync,
+} from "./lib/process.mjs";
 import { loadPrecommitConfig } from "./lib/config.mjs";
 import { parsePrettierList, summarizeEslintJson } from "./lib/checks.mjs";
 import { buildAdvisoryMessage } from "./lib/message.mjs";
@@ -26,6 +31,46 @@ function collectStagedTests(files) {
     }
   }
   return [...tests];
+}
+
+function runEslint(files) {
+  const { command, args, shell } = toolInvocation("eslint", [
+    "--cache",
+    "--cache-strategy",
+    "content",
+    "--format",
+    "json",
+    "--",
+    ...files,
+  ]);
+  return spawnAsync(command, args, { shell, stdio: ["pipe", "pipe", "pipe"] });
+}
+
+function runPrettier(files) {
+  const { command, args, shell } = toolInvocation("prettier", [
+    "--cache",
+    "--cache-location",
+    ".prettiercache",
+    "--cache-strategy",
+    "content",
+    "--list-different",
+    "--ignore-unknown",
+    "--",
+    ...files,
+  ]);
+  return spawnAsync(command, args, { shell, stdio: ["pipe", "pipe", "pipe"] });
+}
+
+function runStagedTestCommand(testCommand, tests) {
+  // Avoid leaking this process's test-runner context into the spawned tests
+  // (e.g. when the hook itself is exercised under `node --test`).
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  return spawnAsync(testCommand[0], [...testCommand.slice(1), ...tests], {
+    shell: isWindows,
+    env,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 const gitFiles = spawnSync(
@@ -116,6 +161,9 @@ if (stagedJsFiles.length === 0 && stagedFormatFiles.length === 0) {
 
 let issues = [];
 
+const config = loadPrecommitConfig();
+
+// Missing-test detection is pure and instant.
 if (stagedJsFiles.length > 0) {
   const missingTests = stagedJsFiles.filter(
     (file) => !isTestExemptFile(file) && !findTestFile(file),
@@ -129,27 +177,26 @@ if (stagedJsFiles.length > 0) {
       detail: missingTests.join("\n"),
     });
   }
+}
 
-  const eslintResult = spawnSync(
-    "npx",
-    [
-      "eslint",
-      "--cache",
-      "--cache-strategy",
-      "content",
-      "--format",
-      "json",
-      "--",
-      ...stagedJsFiles,
-    ],
-    {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: isWindows,
-      timeout: TOOL_TIMEOUT_MS,
-    },
-  );
+const stagedTests = config.runStagedTests
+  ? collectStagedTests(stagedFiles)
+  : [];
+const testCommand =
+  Array.isArray(config.testCommand) && config.testCommand.length > 0
+    ? config.testCommand
+    : ["node", "--test"];
 
+// Run the independent tool checks concurrently.
+const [eslintResult, prettierResult, testRun] = await Promise.all([
+  stagedJsFiles.length > 0 ? runEslint(stagedJsFiles) : null,
+  stagedFormatFiles.length > 0 ? runPrettier(stagedFormatFiles) : null,
+  stagedTests.length > 0
+    ? runStagedTestCommand(testCommand, stagedTests)
+    : null,
+]);
+
+if (eslintResult) {
   if (eslintResult.error || eslintResult.signal) {
     issues.push({
       autoFixable: false,
@@ -193,24 +240,7 @@ if (stagedJsFiles.length > 0) {
   }
 }
 
-if (stagedFormatFiles.length > 0) {
-  const prettierResult = spawnSync(
-    "npx",
-    [
-      "prettier",
-      "--list-different",
-      "--ignore-unknown",
-      "--",
-      ...stagedFormatFiles,
-    ],
-    {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: isWindows,
-      timeout: TOOL_TIMEOUT_MS,
-    },
-  );
-
+if (prettierResult) {
   if (prettierResult.error || prettierResult.signal) {
     issues.push({
       autoFixable: false,
@@ -247,55 +277,29 @@ if (stagedFormatFiles.length > 0) {
   }
 }
 
-const stagedTestConfig = loadPrecommitConfig();
-if (stagedTestConfig.runStagedTests) {
-  const stagedTests = collectStagedTests(stagedFiles);
-  if (stagedTests.length > 0) {
-    const testCommand =
-      Array.isArray(stagedTestConfig.testCommand) &&
-      stagedTestConfig.testCommand.length > 0
-        ? stagedTestConfig.testCommand
-        : ["node", "--test"];
-    // Avoid leaking this process's test-runner context into the spawned tests
-    // (e.g. when the hook itself is exercised under `node --test`).
-    const testEnv = { ...process.env };
-    delete testEnv.NODE_TEST_CONTEXT;
-    const testRun = spawnSync(
-      testCommand[0],
-      [...testCommand.slice(1), ...stagedTests],
-      {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: isWindows,
-        env: testEnv,
-        timeout: TOOL_TIMEOUT_MS,
-      },
-    );
-
-    if (testRun.error || testRun.signal) {
-      issues.push({
-        autoFixable: false,
-        type: "tests",
-        message: testRun.signal
-          ? "Staged tests timed out"
-          : "Unable to run staged tests",
-        detail: testRun.signal
-          ? `No result within ${TOOL_TIMEOUT_MS / 1000}s`
-          : "Check precommitChecks.testCommand in package.json",
-      });
-    } else if ((testRun.status || 0) !== 0) {
-      const testOutput =
-        `${testRun.stdout || ""}${testRun.stderr || ""}`.trim();
-      if (testOutput) {
-        console.log(testOutput);
-      }
-      issues.push({
-        autoFixable: false,
-        type: "tests",
-        message: `${stagedTests.length} staged test file${stagedTests.length === 1 ? "" : "s"} failing`,
-        detail: `Run: ${[...testCommand, ...stagedTests].join(" ")}`,
-      });
+if (testRun) {
+  if (testRun.error || testRun.signal) {
+    issues.push({
+      autoFixable: false,
+      type: "tests",
+      message: testRun.signal
+        ? "Staged tests timed out"
+        : "Unable to run staged tests",
+      detail: testRun.signal
+        ? `No result within ${TOOL_TIMEOUT_MS / 1000}s`
+        : "Check precommitChecks.testCommand in package.json",
+    });
+  } else if ((testRun.status || 0) !== 0) {
+    const testOutput = `${testRun.stdout || ""}${testRun.stderr || ""}`.trim();
+    if (testOutput) {
+      console.log(testOutput);
     }
+    issues.push({
+      autoFixable: false,
+      type: "tests",
+      message: `${stagedTests.length} staged test file${stagedTests.length === 1 ? "" : "s"} failing`,
+      detail: `Run: ${[...testCommand, ...stagedTests].join(" ")}`,
+    });
   }
 }
 

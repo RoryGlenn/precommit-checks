@@ -17,6 +17,7 @@ pnpm-debug.log*
 
 # Caches and coverage
 .eslintcache
+.prettiercache
 .cache/
 coverage/
 .nyc_output/

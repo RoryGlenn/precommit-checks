@@ -1,5 +1,4 @@
-import { spawnSync } from "node:child_process";
-import { isWindows, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
+import { runTool } from "./lib/process.mjs";
 
 const files = process.argv.slice(2).filter(Boolean);
 
@@ -9,28 +8,30 @@ if (files.length === 0) {
 
 let hasRemainingIssues = false;
 
-const eslintResult = spawnSync(
-  "npx",
-  ["eslint", "--cache", "--cache-strategy", "content", "--fix", "--", ...files],
-  {
-    stdio: "inherit",
-    shell: isWindows,
-    timeout: TOOL_TIMEOUT_MS,
-  },
+const eslintResult = runTool(
+  "eslint",
+  ["--cache", "--cache-strategy", "content", "--fix", "--", ...files],
+  { stdio: "inherit" },
 );
 
 if (eslintResult.error || (eslintResult.status || 0) !== 0) {
   hasRemainingIssues = true;
 }
 
-const prettierResult = spawnSync(
-  "npx",
-  ["prettier", "--write", "--ignore-unknown", "--", ...files],
-  {
-    stdio: "inherit",
-    shell: isWindows,
-    timeout: TOOL_TIMEOUT_MS,
-  },
+const prettierResult = runTool(
+  "prettier",
+  [
+    "--cache",
+    "--cache-location",
+    ".prettiercache",
+    "--cache-strategy",
+    "content",
+    "--write",
+    "--ignore-unknown",
+    "--",
+    ...files,
+  ],
+  { stdio: "inherit" },
 );
 
 if (prettierResult.error || (prettierResult.status || 0) !== 0) {

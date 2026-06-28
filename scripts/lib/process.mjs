@@ -1,4 +1,9 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import fs from "node:fs";
+import path from "node:path";
+
+const require = createRequire(import.meta.url);
 
 export const isWindows = process.platform === "win32";
 
@@ -11,5 +16,81 @@ export function run(command, args, options = {}) {
     encoding: "utf8",
     shell: isWindows,
     ...options,
+  });
+}
+
+// Resolve a tool's CLI entry from the nearest node_modules (via its package.json
+// `bin` field) so it can be run with the current Node directly. This skips npx's
+// per-call resolution/startup cost — a meaningful win on slow machines.
+function resolveTool(name) {
+  try {
+    const pkgPath = require.resolve(`${name}/package.json`);
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+    const rel =
+      typeof pkg.bin === "string" ? pkg.bin : pkg.bin && pkg.bin[name];
+    if (!rel) {
+      return null;
+    }
+    return path.join(path.dirname(pkgPath), rel);
+  } catch {
+    return null;
+  }
+}
+
+// Build a spawn invocation for a tool, preferring a direct `node <bin>` call and
+// falling back to npx when the tool can't be resolved locally.
+export function toolInvocation(name, args) {
+  const bin = resolveTool(name);
+  if (bin) {
+    return { command: process.execPath, args: [bin, ...args], shell: false };
+  }
+  return { command: "npx", args: [name, ...args], shell: isWindows };
+}
+
+// Synchronous tool run (used where output is inherited).
+export function runTool(name, args, options = {}) {
+  const { command, args: fullArgs, shell } = toolInvocation(name, args);
+  return spawnSync(command, fullArgs, {
+    shell,
+    timeout: TOOL_TIMEOUT_MS,
+    ...options,
+  });
+}
+
+// Asynchronous spawn that captures stdout/stderr and resolves a result shaped
+// like spawnSync's ({ error, status, signal, stdout, stderr }). Used to run
+// independent checks concurrently.
+export function spawnAsync(command, args, options = {}) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(command, args, { timeout: TOOL_TIMEOUT_MS, ...options });
+    } catch (error) {
+      resolve({ error, status: null, signal: null, stdout: "", stderr: "" });
+      return;
+    }
+
+    let stdout = "";
+    let stderr = "";
+
+    if (child.stdout) {
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk;
+      });
+    }
+    if (child.stderr) {
+      child.stderr.setEncoding("utf8");
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk;
+      });
+    }
+
+    child.on("error", (error) => {
+      resolve({ error, status: null, signal: null, stdout, stderr });
+    });
+    child.on("close", (status, signal) => {
+      resolve({ error: undefined, status, signal, stdout, stderr });
+    });
   });
 }
