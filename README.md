@@ -112,6 +112,29 @@ When enabled, the hook runs `testCommand` against the staged test files plus the
 
 > Note: enabling `runStagedTests` executes a repo-defined command (`testCommand`) on every commit, just like `lint-staged`. Only enable it in repositories you trust. Spawned tools are capped by a timeout so a hung command can't wedge a commit.
 
+## Blocking pushes on test failure (opt-in)
+
+The pre-commit flow is always advisory. If you want a hard gate, enforce it at **push** time instead — commits stay cheap and non-blocking, while broken code is stopped before it is shared. This is handled by a separate `pre-push` hook (`.husky/pre-push` runs `node scripts/prepush.mjs`).
+
+It is **off by default**. Enable it in `package.json`:
+
+```json
+{
+  "precommitChecks": {
+    "blockPushOnTestFailure": true,
+    "pushTestCommand": ["npm", "test"]
+  }
+}
+```
+
+When enabled, `git push` runs `pushTestCommand` and **blocks the push (exit 1) if it fails**. `pushTestCommand` is optional and defaults to `npm test`. To register the hook, add it once:
+
+```bash
+echo "node scripts/prepush.mjs" > .husky/pre-push
+```
+
+> The gate runs the full command you configure (not just staged files) and is capped by a timeout. To bypass it for a single push, use `git push --no-verify`.
+
 ## Message states
 
 The hook prints one box per commit:
