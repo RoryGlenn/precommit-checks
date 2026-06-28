@@ -118,3 +118,61 @@ test("does not flag source files that have a matching test in test/", (t) => {
 
   assert.doesNotMatch(output, /missing unit tests/);
 });
+
+test("treats staged TypeScript files as lintable code files", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  // JS-compatible TS so the default parser lints it without typescript-eslint.
+  writeFile(path.join(tempDir, "src", "thing.ts"), "const unused = 1;\n");
+  run("git", ["add", "src/thing.ts"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /ESLint issue needing manual fixes/);
+  assert.match(output, /missing unit tests/);
+});
+
+test("finds a matching .test.ts for a TypeScript source", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "thing.ts"), "export const thing = 1;\n");
+  writeFile(path.join(tempDir, "test", "thing.test.ts"), "export {};\n");
+  run("git", ["add", "src/thing.ts"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
+});
+
+test("does not flag .d.ts declaration files for missing tests", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "types.d.ts"), "export {};\n");
+  run("git", ["add", "src/types.d.ts"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.doesNotMatch(output, /missing unit tests/);
+});
+
+test("handles a mixed JS and TS commit together", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "a.js"), "export const a = 1;\n");
+  writeFile(path.join(tempDir, "src", "b.ts"), "export const b = 1;\n");
+  run("git", ["add", "src/a.js", "src/b.ts"], tempDir);
+
+  const result = runHook(tempDir);
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.match(output, /2 staged source files missing unit tests/);
+  assert.match(output, /src\/a\.js/);
+  assert.match(output, /src\/b\.ts/);
+});

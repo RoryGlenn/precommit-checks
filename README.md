@@ -1,6 +1,6 @@
 # Pre-commit checks
 
-This repo contains a non-blocking pre-commit flow for JavaScript projects using Husky, lint-staged, ESLint, and Prettier.
+This repo contains a non-blocking pre-commit flow for JavaScript and TypeScript projects using Husky, lint-staged, ESLint, and Prettier. It works on pure JS, pure TS, and mixed JS/TS codebases.
 
 ## Active flow
 
@@ -11,6 +11,13 @@ This repo contains a non-blocking pre-commit flow for JavaScript projects using 
 - `npm run commit:fix` runs `scripts/commit-fix.mjs`, which applies automatic fixes to the latest clean commit and amends it in place.
 - JavaScript files are fixed by `scripts/fix-staged-js.mjs`, which runs `eslint --fix` and then `prettier --write` on the staged JS file set.
 - Other staged Prettier-supported files are fixed by `prettier --write` through `lint-staged`.
+
+## TypeScript and mixed projects
+
+- Staged `.ts`, `.tsx`, `.mts`, `.cts`, and `.cjs` files are treated as code files alongside `.js`/`.jsx`/`.mjs`, so they flow through ESLint and Prettier just like JavaScript.
+- `.d.ts` declaration files are excluded from the "missing unit tests" check.
+- The unit-test heuristic recognizes matching tests in the same directory, an adjacent `__tests__/`, or a top-level `test/`/`tests/` directory (e.g. `src/foo.ts` is satisfied by `test/foo.test.ts`).
+- **Prerequisite for real TypeScript:** these scripts delegate linting to your project's own ESLint config, so your `eslint.config.js` must be set up for TypeScript (e.g. [`typescript-eslint`](https://typescript-eslint.io/)). Prettier formats TypeScript out of the box. Without a TypeScript-aware ESLint parser, ESLint will report parse errors on real type syntax.
 
 ## Safety model
 

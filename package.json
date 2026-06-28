@@ -17,7 +17,7 @@
     "test:precommit": "node scripts/precommit-unified.mjs"
   },
   "lint-staged": {
-    "*.{js,jsx,mjs}": [
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
       "node scripts/fix-staged-js.mjs"
     ],
     "*.{json,css,scss,md,html,yml,yaml}": [

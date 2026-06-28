@@ -5,7 +5,24 @@ import boxen from "boxen";
 import pc from "picocolors";
 
 const isWindows = process.platform === "win32";
-const testSuffixes = [".test.js", ".spec.js", ".test.mjs", ".spec.mjs"];
+const codeExtensions = ["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
+const formatExtensions = [
+  ...codeExtensions,
+  "json",
+  "css",
+  "scss",
+  "md",
+  "html",
+  "yml",
+  "yaml",
+];
+const codeFilePattern = new RegExp(`\\.(${codeExtensions.join("|")})$`);
+const formatFilePattern = new RegExp(`\\.(${formatExtensions.join("|")})$`);
+const declarationFilePattern = /\.d\.(ts|mts|cts)$/;
+const testSuffixes = codeExtensions.flatMap((ext) => [
+  `.test.${ext}`,
+  `.spec.${ext}`,
+]);
 
 function printBox(message, color = (value) => value, options = {}) {
   console.log(
@@ -111,11 +128,9 @@ const unstagedTrackedFiles = canInspectUnstagedFiles
       .filter(Boolean)
   : [];
 
-const stagedJsFiles = stagedFiles.filter((file) =>
-  /\.(js|jsx|mjs)$/.test(file),
-);
+const stagedJsFiles = stagedFiles.filter((file) => codeFilePattern.test(file));
 const stagedFormatFiles = stagedFiles.filter((file) =>
-  /\.(js|jsx|mjs|json|css|scss|md|html|yml|yaml)$/.test(file),
+  formatFilePattern.test(file),
 );
 
 let issues = [];
@@ -124,7 +139,11 @@ let formatIssueCount = 0;
 
 if (stagedJsFiles.length > 0) {
   const missingTests = stagedJsFiles.filter(
-    (file) => !isTestFile(file) && !isInTestDir(file) && !findTestFile(file),
+    (file) =>
+      !isTestFile(file) &&
+      !isInTestDir(file) &&
+      !declarationFilePattern.test(file) &&
+      !findTestFile(file),
   );
 
   if (missingTests.length > 0) {

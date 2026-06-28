@@ -169,13 +169,15 @@ const committedFiles = committedFilesResult.stdout
   .filter(Boolean);
 
 const committedJsFiles = committedFiles.filter((file) =>
-  /\.(js|jsx|mjs)$/.test(file),
+  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file),
 );
 const committedFormatFiles = committedFiles.filter((file) =>
-  /\.(js|jsx|mjs|json|css|scss|md|html|yml|yaml)$/.test(file),
+  /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts|json|css|scss|md|html|yml|yaml)$/.test(
+    file,
+  ),
 );
 const formatOnlyFiles = committedFormatFiles.filter(
-  (file) => !/\.(js|jsx|mjs)$/.test(file),
+  (file) => !/\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/.test(file),
 );
 const fixableFiles = Array.from(
   new Set([...committedJsFiles, ...committedFormatFiles]),

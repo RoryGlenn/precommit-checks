@@ -41,3 +41,15 @@ test("exits 1 when a file has remaining non-fixable lint issues", (t) => {
   assert.equal(result.status, 1);
   assert.equal(readFile(tempDir, "src/broken.js"), "const unused = 1;\n");
 });
+
+test("formats a TypeScript file and exits 0 when auto-fixable", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  writeFile(path.join(tempDir, "src", "fixme.ts"), "export const x=1;\n");
+
+  const result = runFixStagedJs(tempDir, ["src/fixme.ts"]);
+
+  assert.equal(result.status, 0);
+  assert.equal(readFile(tempDir, "src/fixme.ts"), "export const x = 1;\n");
+});
