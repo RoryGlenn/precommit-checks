@@ -6,8 +6,7 @@ This repo contains a non-blocking pre-commit flow for JavaScript projects using 
 
 - `.husky/pre-commit` runs `node scripts/precommit-unified.mjs`.
 - `scripts/precommit-unified.mjs` inspects staged files, prints one consolidated summary box, and never blocks the commit.
-- When ESLint or formatting issues are fixable, the hook suggests `npm run fix:staged`.
-- When every detected issue is auto-fixable, the hook also suggests `npm run commit:fix` as a post-commit amend path.
+- When every warning is auto-fixable and no other tracked worktree changes would block an amend, the hook suggests `npm run commit:fix` as the post-commit amend path.
 - `npm run fix:staged` runs `scripts/fix-staged.mjs`, which delegates staged-file fixing to `lint-staged`.
 - `npm run commit:fix` runs `scripts/commit-fix.mjs`, which applies automatic fixes to the latest clean commit and amends it in place.
 - JavaScript files are fixed by `scripts/fix-staged-js.mjs`, which runs `eslint --fix` and then `prettier --write` on the staged JS file set.

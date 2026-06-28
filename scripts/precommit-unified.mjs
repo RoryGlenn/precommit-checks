@@ -90,6 +90,20 @@ const stagedFiles = gitFiles.stdout
   .map((file) => file.trim())
   .filter(Boolean);
 
+const unstagedFilesResult = spawnSync("git", ["diff", "--name-only"], {
+  encoding: "utf8",
+  shell: isWindows,
+});
+
+const canInspectUnstagedFiles =
+  !unstagedFilesResult.error && unstagedFilesResult.status === 0;
+const unstagedTrackedFiles = canInspectUnstagedFiles
+  ? unstagedFilesResult.stdout
+      .split("\n")
+      .map((file) => file.trim())
+      .filter(Boolean)
+  : [];
+
 const stagedJsFiles = stagedFiles.filter((file) =>
   /\.(js|jsx|mjs)$/.test(file),
 );
@@ -241,18 +255,27 @@ if (issues.length > 0) {
   });
 
   const hasFixableIssue = issues.some((issue) => issue.autoFixable);
+  const hasNonFixableIssue = issues.some((issue) => !issue.autoFixable);
   const canAmendLatestCommit =
-    hasFixableIssue && issues.every((issue) => issue.autoFixable);
+    hasFixableIssue &&
+    !hasNonFixableIssue &&
+    canInspectUnstagedFiles &&
+    unstagedTrackedFiles.length === 0;
 
   messageLines.push("");
-  if (hasFixableIssue) {
-    messageLines.push(pc.dim("Run now on the current staged set:"));
-    messageLines.push(`  ${pc.bold("npm run fix:staged")}`);
+  if (canAmendLatestCommit) {
+    messageLines.push(pc.dim("After this commit completes, apply automatic fixes and amend it:"));
+    messageLines.push(`  ${pc.bold("npm run commit:fix")}`);
+  } else if (hasFixableIssue) {
+    if (hasNonFixableIssue) {
+      messageLines.push(pc.dim("Some warnings still require manual work, so no automatic post-commit command is shown."));
+    }
 
-    if (canAmendLatestCommit) {
-      messageLines.push("");
-      messageLines.push(pc.dim("Or, after this commit completes, amend it with automatic fixes:"));
-      messageLines.push(`  ${pc.bold("npm run commit:fix")}`);
+    if (!canInspectUnstagedFiles) {
+      messageLines.push(pc.dim("The working tree could not be inspected for a safe post-commit amend."));
+    } else if (unstagedTrackedFiles.length > 0) {
+      messageLines.push(pc.dim("Other tracked changes will still be present after commit, so no automatic amend command is shown."));
+      messageLines.push(`  ${pc.dim(shortFileList(unstagedTrackedFiles))}`);
     }
   } else {
     messageLines.push(
