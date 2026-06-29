@@ -56,13 +56,22 @@ This repo contains a non-blocking pre-commit flow for JavaScript and TypeScript 
 
 Your next `git commit` will run the advisory checks.
 
+## Project structure
+
+- `scripts/precommit-unified.mjs` — the pre-commit hook entrypoint (advisory checks).
+- `scripts/prepush.mjs` — the opt-in pre-push test gate.
+- `scripts/fix-staged.mjs` — `npm run fix:staged`, runs lint-staged on staged files.
+- `scripts/fix-staged-js.mjs` — lint-staged task: `eslint --fix` + `prettier --write`.
+- `scripts/commit-fix.mjs` — `npm run commit:fix`, auto-fixes and amends the latest commit.
+- `scripts/lib/` — shared helpers: `ui.mjs` (boxes), `process.mjs` (spawning/tool resolution), `files.mjs` (path/test heuristics), `checks.mjs` (output parsing), `message.mjs` (advisory builder), `config.mjs` (reads `precommitChecks`).
+
 ## Active flow
 
 - `.husky/pre-commit` runs `node scripts/precommit-unified.mjs`.
 - `scripts/precommit-unified.mjs` inspects staged files, prints one consolidated summary box, and never blocks the commit.
 - When automatic fixes can still be applied safely after the commit, the hook suggests `npm run commit:fix` as the post-commit amend path.
 - `npm run fix:staged` runs `scripts/fix-staged.mjs`, which delegates staged-file fixing to `lint-staged`.
-- `npm run commit:fix` runs `scripts/commit-fix.mjs`, which applies automatic fixes to the latest clean commit and amends it in place.
+- `npm run commit:fix` runs `scripts/commit-fix.mjs`, which applies automatic fixes to the latest clean commit and amends it in place (with `--no-verify`, so the advisory hook doesn't re-run and print a duplicate box).
 - JavaScript files are fixed by `scripts/fix-staged-js.mjs`, which runs `eslint --fix` and then `prettier --write` on the staged JS file set.
 - Other staged Prettier-supported files are fixed by `prettier --write` through `lint-staged`.
 
@@ -136,6 +145,28 @@ echo "node scripts/prepush.mjs" > .husky/pre-push
 ```
 
 > The gate is capped by a timeout. To bypass it for a single push, use `git push --no-verify`.
+
+## Configuration reference
+
+All options live under `precommitChecks` in `package.json`; all are optional:
+
+| Key                      | Type     | Default              | Description                                                                           |
+| ------------------------ | -------- | -------------------- | ------------------------------------------------------------------------------------- |
+| `testExempt`             | string[] | `[]`                 | Glob patterns (`*`, `**`, `?`) for files excluded from the missing-test check.        |
+| `runStagedTests`         | boolean  | `false`              | Run tests for staged files at commit time (advisory).                                 |
+| `blockPushOnTestFailure` | boolean  | `false`              | Run the pushed files' tests at `git push` and block on failure.                       |
+| `testCommand`            | string[] | `["node", "--test"]` | Test runner used by both staged tests and the push gate; must accept test file paths. |
+
+```json
+{
+  "precommitChecks": {
+    "testExempt": ["src/legacy/**"],
+    "runStagedTests": true,
+    "blockPushOnTestFailure": true,
+    "testCommand": ["node", "--test"]
+  }
+}
+```
 
 ## Message states
 
