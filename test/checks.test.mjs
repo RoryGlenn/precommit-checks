@@ -40,6 +40,16 @@ test("summarizeEslintJson handles empty or invalid input", () => {
   });
 });
 
+test("summarizeEslintJson defaults missing counts to zero", () => {
+  // ESLint results may omit count fields; the `|| 0` guards must treat them as
+  // zero rather than NaN.
+  const json = JSON.stringify([{ errorCount: 1 }]);
+  assert.deepEqual(summarizeEslintJson(json), {
+    issueCount: 1,
+    fixableCount: 0,
+  });
+});
+
 test("parsePrettierList returns trimmed, non-empty lines", () => {
   assert.deepEqual(parsePrettierList("a.js\n  b.ts \n\n"), ["a.js", "b.ts"]);
   assert.deepEqual(parsePrettierList(""), []);
@@ -74,6 +84,13 @@ test("eslintManualIssues handles empty or invalid input", () => {
   assert.deepEqual(eslintManualIssues(""), []);
   assert.deepEqual(eslintManualIssues("not json"), []);
   assert.deepEqual(eslintManualIssues("[]"), []);
+});
+
+test("eslintManualIssues skips file results that have no messages array", () => {
+  // ESLint omits `messages` for files it didn't report on; the `|| []` guard
+  // must treat that as no manual issues rather than throwing.
+  const json = JSON.stringify([{ filePath: "/repo/src/c.js" }]);
+  assert.deepEqual(eslintManualIssues(json), []);
 });
 
 test("parseNodeTestSummary reads TAP and spec reporter counts", () => {

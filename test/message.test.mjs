@@ -45,6 +45,22 @@ test("suppresses commit:fix when tracked worktree changes block amend", () => {
   assert.ok(text.includes("Other tracked changes will still be present"));
 });
 
+test("flags manual work when a fixable+manual mix has amend blocked", () => {
+  const { lines } = buildAdvisoryMessage(
+    [
+      { type: "format", autoFixable: true, message: "fmt" },
+      { type: "tests", autoFixable: false, message: "missing tests" },
+    ],
+    { canInspectUnstagedFiles: true, unstagedTrackedFiles: ["README.md"] },
+  );
+  const text = lines.join("\n");
+  // Amend is unsafe (other tracked changes), but the manual items are still
+  // called out alongside the blocked-amend note.
+  assert.ok(!text.includes("npm run commit:fix"));
+  assert.ok(text.includes("Manual items above still need your attention."));
+  assert.ok(text.includes("Other tracked changes will still be present"));
+});
+
 test("no fix command when nothing is auto-fixable", () => {
   const { lines } = buildAdvisoryMessage(
     [{ type: "tests", autoFixable: false, message: "missing tests" }],

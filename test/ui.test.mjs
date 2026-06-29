@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   printBox,
   infoBox,
@@ -44,4 +46,26 @@ test("severity boxes render the lines with their title", () => {
     capture(() => errorBox(["err line"])),
     /err line/,
   );
+});
+
+test("severity boxes color the entire border, not just the body", () => {
+  // picocolors/chalk disable ANSI on a non-TTY pipe, so force color on in a
+  // child process and assert a box-drawing border glyph is wrapped in a color
+  // escape — i.e. the border itself is colored, not only the body text.
+  const uiPath = fileURLToPath(
+    new URL("../scripts/lib/ui.mjs", import.meta.url),
+  );
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import { errorBox } from ${JSON.stringify(uiPath)}; errorBox(["boom"]);`,
+    ],
+    { encoding: "utf8", env: { ...process.env, FORCE_COLOR: "1" } },
+  );
+
+  assert.equal(child.status, 0);
+  // An ANSI color escape immediately preceding a rounded-box border character.
+  assert.match(child.stdout, /\u001b\[[0-9;]*m[╭╮╰╯│─]/u);
 });

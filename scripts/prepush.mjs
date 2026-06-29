@@ -22,10 +22,11 @@ const config = loadPrecommitConfig();
 // not (git's pipe on Windows doesn't report as a FIFO). So we only treat a run
 // as interactive when stdin is *certainly* a TTY; on any ambiguity we assume
 // git and stay silent, guaranteeing a real push never prints the advisory box.
-// PREPUSH_ASSUME_INTERACTIVE is a test/debug seam to force the interactive path.
+// COMMITMENT_ISSUES_ASSUME_TTY is a test/debug seam to force the interactive
+// path (a real TTY can't be attached through spawnSync in tests).
 const interactive =
   process.stdin.isTTY === true ||
-  process.env.PREPUSH_ASSUME_INTERACTIVE === "1";
+  process.env.COMMITMENT_ISSUES_ASSUME_TTY === "1";
 
 // Two opt-in modes for running the suite before a push:
 //   blockPushOnTestFailure: run tests and block the push if any fail.
@@ -36,16 +37,16 @@ const blocking = config.blockPushOnTestFailure === true;
 const advisory = !blocking && config.advisePushTests === true;
 
 // The two modes are mutually exclusive; if a repo sets both, surface the
-// conflict so it's clearly a config mistake rather than silently ignored.
-if (config.blockPushOnTestFailure === true && config.advisePushTests === true) {
-  warningBox([
-    pc.bold("Conflicting pre-push config"),
-    "",
-    pc.dim("Both blockPushOnTestFailure and advisePushTests are set to true."),
-    pc.dim("They are mutually exclusive — using blockPushOnTestFailure (block"),
-    pc.dim("on failure). Remove advisePushTests from package.json to silence"),
-    pc.dim("this warning."),
-  ]);
+// conflict (one concise line on stderr) so it's clearly a config mistake rather
+// than silently ignored — without shoving a full box in front of every push.
+if (blocking && config.advisePushTests === true) {
+  console.warn(
+    pc.yellow(
+      "⚠ Both blockPushOnTestFailure and advisePushTests are set; using " +
+        "blockPushOnTestFailure (block on failure). Remove advisePushTests " +
+        "from package.json to silence this.",
+    ),
+  );
 }
 
 if (!blocking && !advisory) {
@@ -86,20 +87,33 @@ function readStdin() {
   return new Promise((resolve) => {
     let raw = "";
     let settled = false;
+    let timer;
     const done = () => {
       if (settled) {
         return;
       }
       settled = true;
       clearTimeout(timer);
+      process.stdin.off("data", onData);
+      process.stdin.off("end", done);
+      process.stdin.off("error", done);
       resolve(raw);
     };
-    const timer = setTimeout(done, 1000);
-    timer.unref?.();
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", (chunk) => {
+    // Treat the timeout as an *idle* deadline, re-armed on each chunk, so we
+    // always wait for the full ref list and only bail when stdin goes quiet
+    // (the never-arrives case) rather than truncating a slow push mid-stream.
+    const armTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(done, 1000);
+      timer.unref?.();
+    };
+    const onData = (chunk) => {
       raw += chunk;
-    });
+      armTimer();
+    };
+    armTimer();
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", onData);
     process.stdin.on("end", done);
     process.stdin.on("error", done);
   });

@@ -27,6 +27,15 @@ test("toolInvocation falls back to npx for an unresolved tool", () => {
   assert.equal(inv.shell, isWindows);
 });
 
+test("toolInvocation falls back to npx for a resolvable package with no bin", () => {
+  // picocolors is installed (its package.json resolves) but exposes no `bin`,
+  // so resolveTool returns null and we fall back to npx.
+  const inv = toolInvocation("picocolors", ["--help"]);
+  assert.equal(inv.command, "npx");
+  assert.deepEqual(inv.args, ["picocolors", "--help"]);
+  assert.equal(inv.shell, isWindows);
+});
+
 test("run captures stdout synchronously", () => {
   const result = run("node", ["-e", "process.stdout.write('hi')"]);
   assert.equal(result.status, 0);
@@ -53,6 +62,16 @@ test("spawnAsync resolves an error for a missing binary", async () => {
   const result = await spawnAsync("definitely-not-a-real-binary-xyz", []);
   assert.ok(result.error);
   assert.equal(result.status, null);
+});
+
+test("spawnAsync resolves an error when spawn throws synchronously", async () => {
+  // A non-array `args` makes child_process.spawn throw synchronously; spawnAsync
+  // must catch it and resolve a result rather than letting the throw escape.
+  const result = await spawnAsync("node", "not-an-array");
+  assert.ok(result.error);
+  assert.equal(result.status, null);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "");
 });
 
 test("spawnAsync reports a non-zero status", async () => {

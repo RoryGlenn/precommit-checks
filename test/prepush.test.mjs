@@ -20,7 +20,7 @@ function runPrePush(tempDir, input = "") {
 function runPrePushManual(tempDir) {
   return run("node", [path.join(tempDir, "scripts", "prepush.mjs")], tempDir, {
     input: "",
-    env: { ...process.env, PREPUSH_ASSUME_INTERACTIVE: "1" },
+    env: { ...process.env, COMMITMENT_ISSUES_ASSUME_TTY: "1" },
   });
 }
 
@@ -182,6 +182,8 @@ test("advisory mode shows passing summary and allows the push", (t) => {
   assert.equal(result.status, 0);
   assert.match(output, /All tests passed/);
   assert.match(output, /1 passed, 0 failed/);
+  // A single mode is not a conflict, so no conflict warning should appear.
+  assert.doesNotMatch(output, /advisePushTests are set/);
 });
 
 test("blockPushOnTestFailure takes precedence over advisePushTests", (t) => {
@@ -200,7 +202,10 @@ test("blockPushOnTestFailure takes precedence over advisePushTests", (t) => {
   assert.equal(result.status, 1);
   assert.match(output, /Push blocked: tests failed/);
   // Setting both modes is a config conflict and must be surfaced.
-  assert.match(output, /Conflicting pre-push config/);
+  assert.match(
+    output,
+    /Both blockPushOnTestFailure and advisePushTests are set/,
+  );
 });
 
 test("advisory mode warns but allows the push when the test command cannot run", (t) => {
