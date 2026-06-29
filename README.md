@@ -8,7 +8,7 @@ Advisory pre-commit checks that nudge, never block. A non-blocking pre-commit fl
 
 - **Node.js >= 22** — the scripts use modern ESM features and the built-in `node --test` runner.
 - Dev dependencies in your project: `husky`, `lint-staged`, `eslint`, `prettier`, plus `boxen` and `picocolors` for the boxed output.
-- An ESLint flat config (`eslint.config.js`) in your project. For TypeScript, it must be TypeScript-aware (see [TypeScript and mixed projects](#typescript-and-mixed-projects)).
+- An ESLint flat config (`eslint.config.js`) in your project. For TypeScript, it must be TypeScript-aware (see [TypeScript and mixed projects](#typescript-and-mixed-projects)). The bundled config includes React support via `eslint-plugin-react` and `eslint-plugin-react-hooks`, applying recommended rules to `.jsx`/`.tsx` files with automatic React version detection.
 
 ## Installation
 

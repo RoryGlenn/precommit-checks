@@ -1,3 +1,6 @@
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+
 export default [
   {
     ignores: ["node_modules/**"],
@@ -7,6 +10,11 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
         console: "readonly",
       },
@@ -14,5 +22,18 @@ export default [
     rules: {
       "no-unused-vars": "error",
     },
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...react.configs.flat.recommended,
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...reactHooks.configs.flat["recommended-latest"],
   },
 ];
