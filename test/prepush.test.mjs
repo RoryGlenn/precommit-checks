@@ -143,3 +143,51 @@ test("blocks the push when the test command cannot run", (t) => {
   assert.equal(result.status, 1);
   assert.match(output, /could not run tests/);
 });
+
+test("advisory mode runs tests and warns without blocking on failure", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  setConfig(tempDir, { advisePushTests: true });
+  commitWidget(tempDir, 2); // widget() returns 1, so asserting 2 fails
+
+  const result = runPrePush(tempDir, pushInput(tempDir));
+  const output = `${result.stdout}${result.stderr}`;
+
+  // Failing tests must NOT block the push in advisory mode.
+  assert.equal(result.status, 0);
+  assert.match(output, /Tests failed \(advisory\)/);
+  assert.match(output, /widget\.test\.mjs/);
+});
+
+test("advisory mode shows passing summary and allows the push", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  setConfig(tempDir, { advisePushTests: true });
+  commitWidget(tempDir, 1); // widget() returns 1, so asserting 1 passes
+
+  const result = runPrePush(tempDir, pushInput(tempDir));
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.equal(result.status, 0);
+  assert.match(output, /All tests passed/);
+  assert.match(output, /1 passed, 0 failed/);
+});
+
+test("blockPushOnTestFailure takes precedence over advisePushTests", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  setConfig(tempDir, {
+    blockPushOnTestFailure: true,
+    advisePushTests: true,
+  });
+  commitWidget(tempDir, 2); // failing test
+
+  const result = runPrePush(tempDir, pushInput(tempDir));
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.equal(result.status, 1);
+  assert.match(output, /Push blocked: tests failed/);
+});

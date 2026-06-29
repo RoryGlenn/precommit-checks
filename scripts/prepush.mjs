@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import pc from "picocolors";
-import { errorBox, infoBox, successBox } from "./lib/ui.mjs";
+import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
 import { isWindows, run, spawnAsync, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 import { loadPrecommitConfig } from "./lib/config.mjs";
 import { parseNodeTestSummary } from "./lib/checks.mjs";
@@ -15,20 +15,11 @@ const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
 const config = loadPrecommitConfig();
 
-// Opt-in only: stay completely silent and allow the push unless the repo has
-// explicitly enabled the gate. This preserves the tool's non-blocking default
-// at commit time while letting teams enforce a green suite before sharing code.
-if (!config.blockPushOnTestFailure) {
-  process.exit(0);
-}
-
-const testCommand =
-  Array.isArray(config.testCommand) && config.testCommand.length > 0
-    ? config.testCommand
-    : ["node", "--test"];
-
-// Git feeds the pre-push hook "<local ref> <local sha> <remote ref> <remote
-// sha>" lines on stdin. Read them to learn exactly what is being pushed.
+// Git connects fd 0 to a pipe/file when it runs the hook, whereas a manual run
+// leaves it on the interactive terminal. `isTTY` is unreliable on Windows
+// (undefined under Git Bash/MSYS), so detect piped input directly. This both
+// avoids blocking forever on stdin during a manual run and lets us tell whether
+// the script is being run by git or by a human.
 function stdinIsPiped() {
   if (process.stdin.isTTY) {
     return false;
@@ -41,12 +32,45 @@ function stdinIsPiped() {
   }
 }
 
+const runByGit = stdinIsPiped();
+
+// Two opt-in modes for running the suite before a push:
+//   blockPushOnTestFailure: run tests and block the push if any fail.
+//   advisePushTests:        run tests and report results, but never block.
+// `blockPushOnTestFailure` wins if both are set. With neither, stay out of the
+// way entirely — preserving the tool's non-blocking-by-default philosophy.
+const blocking = config.blockPushOnTestFailure === true;
+const advisory = !blocking && config.advisePushTests === true;
+
+if (!blocking && !advisory) {
+  // Silent during a real `git push` (the documented non-blocking default), but
+  // when a human runs this by hand it would otherwise exit with no output and
+  // look broken — so explain why nothing ran and how to turn a mode on.
+  if (!runByGit) {
+    infoBox([
+      pc.bold("Pre-push test checks are disabled."),
+      "",
+      pc.dim("Nothing ran because no pre-push test mode is enabled in"),
+      pc.dim("package.json. Enable one under precommitChecks:"),
+      "",
+      `  ${pc.bold('"blockPushOnTestFailure": true')} ${pc.dim("— run tests and block on failure")}`,
+      `  ${pc.bold('"advisePushTests": true')} ${pc.dim("— run tests but only warn")}`,
+    ]);
+  }
+  process.exit(0);
+}
+
+const testCommand =
+  Array.isArray(config.testCommand) && config.testCommand.length > 0
+    ? config.testCommand
+    : ["node", "--test"];
+
+// Git feeds the pre-push hook "<local ref> <local sha> <remote ref> <remote
+// sha>" lines on stdin. Read them to learn exactly what is being pushed.
 async function readPushRefs() {
-  // `isTTY` is unreliable on Windows (undefined under Git Bash/MSYS), so detect
-  // piped input directly: git connects fd 0 to a pipe/file when it runs the
-  // hook, whereas a manual run leaves it on the interactive terminal. Without
-  // this, a manual `node scripts/prepush.mjs` would block forever reading stdin.
-  if (!stdinIsPiped()) {
+  // When not run by git (manual invocation), there are no refs on stdin; skip
+  // the read entirely so we never block waiting for input that won't arrive.
+  if (!runByGit) {
     return [];
   }
   let raw = "";
@@ -178,27 +202,42 @@ const summaryLines = summary
   : [];
 
 if (result.error || result.signal) {
-  errorBox([
-    pc.bold("Push blocked: could not run tests"),
+  const reason = pc.dim(
+    result.signal
+      ? `The test command timed out after ${TOOL_TIMEOUT_MS / 1000}s.`
+      : "Check precommitChecks.testCommand in package.json.",
+  );
+  if (blocking) {
+    errorBox([pc.bold("Push blocked: could not run tests"), "", reason]);
+    process.exit(1);
+  }
+  warningBox([
+    pc.bold("Could not run tests (advisory)"),
     "",
-    pc.dim(
-      result.signal
-        ? `The test command timed out after ${TOOL_TIMEOUT_MS / 1000}s.`
-        : "Check precommitChecks.testCommand in package.json.",
-    ),
+    reason,
+    pc.dim("Push allowed."),
   ]);
-  process.exit(1);
+  process.exit(0);
 }
 
 if ((result.status || 0) !== 0) {
-  errorBox([
-    pc.bold("Push blocked: tests failed"),
+  if (blocking) {
+    errorBox([
+      pc.bold("Push blocked: tests failed"),
+      ...summaryLines,
+      "",
+      pc.dim("Fix the failing tests above, then push again."),
+      pc.dim("To bypass this gate once: git push --no-verify"),
+    ]);
+    process.exit(1);
+  }
+  warningBox([
+    pc.bold("Tests failed (advisory)"),
     ...summaryLines,
     "",
-    pc.dim("Fix the failing tests above, then push again."),
-    pc.dim("To bypass this gate once: git push --no-verify"),
+    pc.dim("Push allowed, but the failing tests above need attention."),
   ]);
-  process.exit(1);
+  process.exit(0);
 }
 
 successBox([

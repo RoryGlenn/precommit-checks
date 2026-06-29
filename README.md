@@ -144,6 +144,20 @@ It is **off by default**. Enable it in `package.json`:
 
 When enabled, `git push` runs **only the tests associated with the files being pushed** — the changed test files themselves, plus any test discovered for a changed source file (same heuristic as the missing-test check) — and **blocks the push (exit 1) if any fail**. If the pushed files have no associated tests, the push is allowed. The runner is `testCommand` (shared with the staged-test feature), which defaults to `node --test` and must accept test file paths as arguments. The output streams live and ends with a boxed `N passed, N failed` summary.
 
+### Advisory push tests (run but never block)
+
+If you want the suite to run on push but only **warn** on failure (never blocking), enable `advisePushTests` instead:
+
+```json
+{
+  "precommitChecks": {
+    "advisePushTests": true
+  }
+}
+```
+
+This runs the same pushed-files tests and prints the live output and summary, but always exits 0 — a failure shows a `Tests failed (advisory)` warning box and the push still proceeds. If `blockPushOnTestFailure` is also set, it takes precedence and the push is blocked.
+
 To register the hook, add it once:
 
 ```bash
@@ -156,14 +170,15 @@ echo "node scripts/prepush.mjs" > .husky/pre-push
 
 All options live under `precommitChecks` in `package.json`; all are optional:
 
-| Key                      | Type     | Default              | Description                                                                           |
-| ------------------------ | -------- | -------------------- | ------------------------------------------------------------------------------------- |
-| `testExempt`             | string[] | `[]`                 | Glob patterns (`*`, `**`, `?`) for files excluded from the missing-test check.        |
-| `requireTests`           | boolean  | `true`               | Set `false` to disable the "missing unit tests" advisory entirely.                    |
-| `runStagedTests`         | boolean  | `false`              | Run tests for staged files at commit time (advisory).                                 |
-| `blockPushOnTestFailure` | boolean  | `false`              | Run the pushed files' tests at `git push` and block on failure.                       |
-| `testCommand`            | string[] | `["node", "--test"]` | Test runner used by both staged tests and the push gate; must accept test file paths. |
-| `timeoutMs`              | number   | `120000`             | Max time any spawned tool may run before it's treated as timed out.                   |
+| Key                      | Type     | Default              | Description                                                                                                        |
+| ------------------------ | -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `testExempt`             | string[] | `[]`                 | Glob patterns (`*`, `**`, `?`) for files excluded from the missing-test check.                                     |
+| `requireTests`           | boolean  | `true`               | Set `false` to disable the "missing unit tests" advisory entirely.                                                 |
+| `runStagedTests`         | boolean  | `false`              | Run tests for staged files at commit time (advisory).                                                              |
+| `blockPushOnTestFailure` | boolean  | `false`              | Run the pushed files' tests at `git push` and block on failure.                                                    |
+| `advisePushTests`        | boolean  | `false`              | Run the pushed files' tests at `git push` but only warn (never block). Ignored if `blockPushOnTestFailure` is set. |
+| `testCommand`            | string[] | `["node", "--test"]` | Test runner used by both staged tests and the push gate; must accept test file paths.                              |
+| `timeoutMs`              | number   | `120000`             | Max time any spawned tool may run before it's treated as timed out.                                                |
 
 ```json
 {
