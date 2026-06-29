@@ -69,15 +69,15 @@ export function eslintManualIssues(stdout) {
 
 /**
  * Best-effort parse of a `node --test` run summary. Handles the TAP reporter
- * ("# pass 46") and spec reporter ("ℹ pass 46"), and strips ANSI first.
+ * ("# pass 46") and spec reporter ("i pass 46"), and strips ANSI first.
  * @param {string} output - Test runner output.
  * @returns {{passed: number, failed: number}|null} Counts, or null if unrecognized.
  */
 export function parseNodeTestSummary(output) {
   // Strip ANSI color codes so colored reporter output still parses.
   const clean = (output || "").replace(/\u001b\[[0-9;]*m/g, "");
-  const pass = clean.match(/^[#ℹ\s]*pass\s+(\d+)\s*$/m);
-  const fail = clean.match(/^[#ℹ\s]*fail\s+(\d+)\s*$/m);
+  const pass = clean.match(/^[#\u2139\s]*pass\s+(\d+)\s*$/m);
+  const fail = clean.match(/^[#\u2139\s]*fail\s+(\d+)\s*$/m);
   if (!pass && !fail) {
     return null;
   }
