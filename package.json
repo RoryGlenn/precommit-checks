@@ -6,6 +6,7 @@
   "description": "Commitment Issues: advisory pre-commit checks that nudge, never block.",
   "scripts": {
     "prepare": "husky",
+    "init": "node scripts/init.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",

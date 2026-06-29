@@ -20,45 +20,51 @@ Advisory pre-commit checks that nudge, never block. A non-blocking pre-commit fl
 
 2. Copy the `scripts/` directory (including `scripts/lib/`) into your project root.
 
-3. Enable Husky and register the hook:
+3. Run the one-command setup:
 
    ```bash
-   npx husky init
-   echo "node scripts/precommit-unified.mjs" > .husky/pre-commit
+   node scripts/init.mjs
    ```
 
-   `npx husky init` adds a `"prepare": "husky"` script, so the hook is installed automatically on every `npm install`.
+   This wires up the `.husky/pre-commit` and `.husky/pre-push` hooks, adds the npm scripts and `lint-staged` config, seeds an empty `precommitChecks` block, and gitignores the caches — all idempotent, so it's safe to re-run.
 
-4. Add the npm scripts and configuration to your `package.json`:
+4. Make sure your project has an ESLint flat config (`eslint.config.js`); for TypeScript, make it TypeScript-aware (see below).
 
-   ```json
-   {
-     "scripts": {
-       "commit:fix": "node scripts/commit-fix.mjs",
-       "fix:staged": "node scripts/fix-staged.mjs",
-       "test:precommit": "node scripts/precommit-unified.mjs"
-     },
-     "lint-staged": {
-       "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": ["node scripts/fix-staged-js.mjs"],
-       "*.{json,css,scss,md,html,yml,yaml}": [
-         "prettier --write --ignore-unknown"
-       ]
-     }
-   }
-   ```
+<details>
+<summary>Prefer manual setup?</summary>
 
-5. Add the caches to your `.gitignore`:
+Skip step 3 and instead register the hooks and add the scripts yourself:
 
-   ```gitignore
-   .eslintcache
-   .prettiercache
-   ```
+```bash
+npx husky init
+echo "node scripts/precommit-unified.mjs" > .husky/pre-commit
+echo "node scripts/prepush.mjs" > .husky/pre-push
+```
+
+```json
+{
+  "scripts": {
+    "commit:fix": "node scripts/commit-fix.mjs",
+    "fix:staged": "node scripts/fix-staged.mjs",
+    "test:precommit": "node scripts/precommit-unified.mjs"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": ["node scripts/fix-staged-js.mjs"],
+    "*.{json,css,scss,md,html,yml,yaml}": ["prettier --write --ignore-unknown"]
+  }
+}
+```
+
+Then gitignore `.eslintcache` and `.prettiercache`.
+
+</details>
 
 Your next `git commit` will run the advisory checks.
 
 ## Project structure
 
 - `scripts/precommit-unified.mjs` — the pre-commit hook entrypoint (advisory checks).
+- `scripts/init.mjs` — one-command setup for a consuming repo.
 - `scripts/prepush.mjs` — the opt-in pre-push test gate.
 - `scripts/fix-staged.mjs` — `npm run fix:staged`, runs lint-staged on staged files.
 - `scripts/fix-staged-js.mjs` — lint-staged task: `eslint --fix` + `prettier --write`.
@@ -200,6 +206,7 @@ These scripts are Git-hook tooling, so disable Husky in CI with `HUSKY=0` to avo
 ## Commands
 
 ```bash
+npm run init            # one-command setup (hooks, scripts, config)
 npm run test:precommit  # run the unified hook script directly
 npm run fix:staged      # apply staged-only ESLint/Prettier fixes
 npm run commit:fix      # apply automatic fixes to the latest clean commit and amend it
