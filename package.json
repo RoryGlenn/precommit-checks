@@ -38,6 +38,7 @@
     "commit:fix": "node scripts/commit-fix.mjs",
     "fix:staged": "node scripts/fix-staged.mjs",
     "test": "node --test test/*.test.mjs",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.mjs",
     "test:precommit": "node scripts/precommit-unified.mjs"
   },
   "lint-staged": {

@@ -213,6 +213,7 @@ npm run test:precommit  # run the unified hook script directly
 npm run fix:staged      # apply staged-only ESLint/Prettier fixes
 npm run commit:fix      # apply automatic fixes to the latest clean commit and amend it
 npm test                 # run automated hook behavior tests
+npm run test:coverage   # run tests with a coverage report
 npm run lint            # lint the full repo
 npm run format:check    # check formatting across the repo
 ```
