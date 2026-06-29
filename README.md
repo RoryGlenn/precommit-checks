@@ -6,7 +6,7 @@ Advisory pre-commit checks that nudge, never block. A non-blocking pre-commit fl
 
 ## Requirements
 
-- **Node.js >= 21** — the scripts use modern ESM features and the built-in `node --test` runner.
+- **Node.js >= 22** — the scripts use modern ESM features and the built-in `node --test` runner.
 - Dev dependencies in your project: `husky`, `lint-staged`, `eslint`, `prettier`, plus `boxen` and `picocolors` for the boxed output.
 - An ESLint flat config (`eslint.config.js`) in your project. For TypeScript, it must be TypeScript-aware (see [TypeScript and mixed projects](#typescript-and-mixed-projects)).
 
@@ -203,7 +203,7 @@ The hook is tuned to stay fast even on slow machines:
 
 ## Continuous integration
 
-These scripts are Git-hook tooling, so disable Husky in CI with `HUSKY=0` to avoid installing hooks during `npm ci`. This project's own workflow runs `npm ci`, `npm run lint`, `npm run format:check`, and `npm test` on Node 21, 22, and 24.
+These scripts are Git-hook tooling, so disable Husky in CI with `HUSKY=0` to avoid installing hooks during `npm ci`. This project's own workflow runs `npm ci`, `npm run lint`, `npm run format:check`, and `npm test` on Node 22 and 24.
 
 ## Commands
 
