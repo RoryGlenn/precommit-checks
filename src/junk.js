@@ -6,9 +6,6 @@
 // NOTE: deliberately fails `npm run lint` and `npm run format:check`.
 // Scratch fixture only — do not commit it to main.
 
-const unusedVariable = 42
-
-export function   add( a,b ) {
-return a+b
+export function add(a, b) {
+  return a + b;
 }
-    
