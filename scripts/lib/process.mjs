@@ -89,10 +89,7 @@ export function spawnAsync(command, args, options = {}) {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(command, args, {
-        timeout: TOOL_TIMEOUT_MS,
-        ...spawnOptions,
-      });
+      child = spawn(command, args, spawnOptions);
     } catch (error) {
       resolve({ error, status: null, signal: null, stdout: "", stderr: "" });
       return;
@@ -100,6 +97,28 @@ export function spawnAsync(command, args, options = {}) {
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    const finish = (payload) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      resolve(payload);
+    };
+    // Cap runtime ourselves with an unref'd timer so a failed/errored spawn can
+    // never keep the event loop alive (spawn's built-in timeout can linger).
+    const timer = setTimeout(() => {
+      child.kill();
+      finish({
+        error: undefined,
+        status: null,
+        signal: "SIGTERM",
+        stdout,
+        stderr,
+      });
+    }, TOOL_TIMEOUT_MS);
+    timer.unref?.();
 
     if (child.stdout) {
       child.stdout.setEncoding("utf8");
@@ -121,10 +140,10 @@ export function spawnAsync(command, args, options = {}) {
     }
 
     child.on("error", (error) => {
-      resolve({ error, status: null, signal: null, stdout, stderr });
+      finish({ error, status: null, signal: null, stdout, stderr });
     });
     child.on("close", (status, signal) => {
-      resolve({ error: undefined, status, signal, stdout, stderr });
+      finish({ error: undefined, status, signal, stdout, stderr });
     });
   });
 }
