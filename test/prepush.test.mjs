@@ -79,6 +79,23 @@ test("allows the push when pushed files have no associated tests", (t) => {
   assert.match(output, /No tests to run before push/);
 });
 
+test("ignores deleted test files in the push (no run for removed tests)", (t) => {
+  const tempDir = createTempRepo();
+  t.after(() => cleanupTempRepo(tempDir));
+
+  setConfig(tempDir, { blockPushOnTestFailure: true });
+  // Add a passing test, then a commit that deletes it.
+  commitWidget(tempDir, 1);
+  run("git", ["rm", "src/widget.mjs", "src/widget.test.mjs"], tempDir);
+  run("git", ["commit", "-m", "remove widget"], tempDir);
+
+  const result = runPrePush(tempDir, pushInput(tempDir));
+  const output = `${result.stdout}${result.stderr}`;
+
+  assert.equal(result.status, 0);
+  assert.match(output, /No tests to run before push/);
+});
+
 test("runs only the pushed files' tests and blocks on failure", (t) => {
   const tempDir = createTempRepo();
   t.after(() => cleanupTempRepo(tempDir));

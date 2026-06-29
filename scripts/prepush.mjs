@@ -49,7 +49,15 @@ async function readPushRefs() {
 }
 
 function diffFiles(base, head) {
-  const result = run("git", ["diff", "--name-only", base, head]);
+  // Exclude deletions (--diff-filter=ACMRT): a deleted test file must not be
+  // re-run, or the gate would fail trying to load a file that no longer exists.
+  const result = run("git", [
+    "diff",
+    "--name-only",
+    "--diff-filter=ACMRT",
+    base,
+    head,
+  ]);
   if ((result.status || 0) !== 0) {
     return [];
   }
