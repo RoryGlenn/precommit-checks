@@ -104,9 +104,9 @@ if (stagedFiles.length === 0) {
   infoBox(
     hasStagedChanges
       ? [
-          pc.bold("No files to check in this commit."),
+          pc.bold("Deletion-only commit — nothing to check."),
           "",
-          pc.dim("Staged changes (such as deletions) will be committed as-is."),
+          pc.dim("Removing files needs no lint, format, or tests. Looks good!"),
         ]
       : [
           pc.bold("No staged files to check."),

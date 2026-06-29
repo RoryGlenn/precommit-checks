@@ -284,7 +284,7 @@ test("distinguishes a deletion-only commit from nothing staged", (t) => {
   const result = runHook(tempDir);
   const output = `${result.stdout}${result.stderr}`;
 
-  assert.match(output, /committed as-is/);
+  assert.match(output, /Deletion-only commit/);
   assert.doesNotMatch(output, /Stage changes with git add/);
 });
 
