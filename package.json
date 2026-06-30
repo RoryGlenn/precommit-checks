@@ -33,6 +33,7 @@
   },
   "scripts": {
     "prepare": "husky || true",
+    "prepublishOnly": "npm test",
     "init": "node scripts/init.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
