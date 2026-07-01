@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import spawn from "cross-spawn";
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,16 +17,17 @@ export const TOOL_TIMEOUT_MS =
     : 120000;
 
 /**
- * Run a command synchronously, capturing utf8 output (shell on Windows).
+ * Run a command synchronously, capturing utf8 output. Uses cross-spawn so bare
+ * command names (git, npx, node) resolve on Windows without a shell, which also
+ * avoids the Node DEP0190 warning and shell arg-quoting pitfalls.
  * @param {string} command - Executable.
  * @param {string[]} args - Arguments.
  * @param {object} [options] - Extra spawnSync options.
  * @returns {import("node:child_process").SpawnSyncReturns<string>} Result.
  */
 export function run(command, args, options = {}) {
-  return spawnSync(command, args, {
+  return spawn.sync(command, args, {
     encoding: "utf8",
-    shell: isWindows,
     ...options,
   });
 }
@@ -54,14 +55,14 @@ function resolveTool(name) {
  * falling back to npx when the tool can't be resolved locally.
  * @param {string} name - Package/bin name (e.g. "eslint").
  * @param {string[]} args - Tool arguments.
- * @returns {{command: string, args: string[], shell: boolean}} Invocation parts.
+ * @returns {{command: string, args: string[]}} Invocation parts.
  */
 export function toolInvocation(name, args) {
   const bin = resolveTool(name);
   if (bin) {
-    return { command: process.execPath, args: [bin, ...args], shell: false };
+    return { command: process.execPath, args: [bin, ...args] };
   }
-  return { command: "npx", args: [name, ...args], shell: isWindows };
+  return { command: "npx", args: [name, ...args] };
 }
 
 /**
@@ -72,9 +73,8 @@ export function toolInvocation(name, args) {
  * @returns {import("node:child_process").SpawnSyncReturns<string>} Result.
  */
 export function runTool(name, args, options = {}) {
-  const { command, args: fullArgs, shell } = toolInvocation(name, args);
-  return spawnSync(command, fullArgs, {
-    shell,
+  const { command, args: fullArgs } = toolInvocation(name, args);
+  return spawn.sync(command, fullArgs, {
     timeout: TOOL_TIMEOUT_MS,
     ...options,
   });

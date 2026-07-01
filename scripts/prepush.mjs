@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
-import { isWindows, run, spawnAsync, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
+import { run, spawnAsync, TOOL_TIMEOUT_MS } from "./lib/process.mjs";
 import { loadPrecommitConfig } from "./lib/config.mjs";
 import { parseNodeTestSummary } from "./lib/checks.mjs";
 import { collectTestsForFiles } from "./lib/files.mjs";
@@ -218,7 +218,6 @@ if (isNodeTest) {
     ...testFiles,
   ];
   result = await spawnAsync(testCommand[0], args, {
-    shell: isWindows,
     env,
     stdio: "inherit",
   });
@@ -231,7 +230,6 @@ if (isNodeTest) {
   }
 } else {
   result = await spawnAsync(fullCommand[0], fullCommand.slice(1), {
-    shell: isWindows,
     env,
     echo: true,
   });

@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import {
-  isWindows,
   run,
   toolInvocation,
   runTool,
@@ -13,7 +12,6 @@ test("toolInvocation resolves a local bin and runs it via the current Node", () 
   const eslint = toolInvocation("eslint", ["--version"]);
   assert.equal(eslint.command, process.execPath);
   assert.match(eslint.args[0], /eslint/);
-  assert.equal(eslint.shell, false);
 
   const prettier = toolInvocation("prettier", ["--version"]);
   assert.equal(prettier.command, process.execPath);
@@ -24,7 +22,6 @@ test("toolInvocation falls back to npx for an unresolved tool", () => {
   const inv = toolInvocation("definitely-not-installed-xyz", ["--help"]);
   assert.equal(inv.command, "npx");
   assert.deepEqual(inv.args, ["definitely-not-installed-xyz", "--help"]);
-  assert.equal(inv.shell, isWindows);
 });
 
 test("toolInvocation falls back to npx for a resolvable package with no bin", () => {
@@ -33,13 +30,25 @@ test("toolInvocation falls back to npx for a resolvable package with no bin", ()
   const inv = toolInvocation("picocolors", ["--help"]);
   assert.equal(inv.command, "npx");
   assert.deepEqual(inv.args, ["picocolors", "--help"]);
-  assert.equal(inv.shell, isWindows);
 });
 
 test("run captures stdout synchronously", () => {
   const result = run("node", ["-e", "process.stdout.write('hi')"]);
   assert.equal(result.status, 0);
   assert.equal(result.stdout, "hi");
+});
+
+test("run passes a space-containing argument as a single argv", () => {
+  // cross-spawn runs without shell:true, so an argument with spaces must arrive
+  // intact rather than being word-split by a shell (the Windows footgun this
+  // migration removes). This also keeps us clear of the Node DEP0190 warning.
+  const result = run("node", [
+    "-e",
+    "process.stdout.write(process.argv[1])",
+    "hello world",
+  ]);
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "hello world");
 });
 
 test("runTool runs a resolved tool synchronously", () => {
@@ -65,9 +74,9 @@ test("spawnAsync resolves an error for a missing binary", async () => {
 });
 
 test("spawnAsync resolves an error when spawn throws synchronously", async () => {
-  // A non-array `args` makes child_process.spawn throw synchronously; spawnAsync
-  // must catch it and resolve a result rather than letting the throw escape.
-  const result = await spawnAsync("node", "not-an-array");
+  // An invalid `cwd` makes the spawn throw synchronously; spawnAsync must catch
+  // it and resolve a result rather than letting the throw escape.
+  const result = await spawnAsync("node", ["-v"], { cwd: 12345 });
   assert.ok(result.error);
   assert.equal(result.status, null);
   assert.equal(result.stdout, "");

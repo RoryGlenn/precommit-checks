@@ -1,12 +1,11 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import pc from "picocolors";
 import { errorBox, infoBox, successBox, warningBox } from "./lib/ui.mjs";
 import {
-  isWindows,
   TOOL_TIMEOUT_MS,
   toolInvocation,
   spawnAsync,
+  run,
 } from "./lib/process.mjs";
 import { loadPrecommitConfig } from "./lib/config.mjs";
 import {
@@ -24,7 +23,7 @@ import {
 } from "./lib/files.mjs";
 
 function runEslint(files) {
-  const { command, args, shell } = toolInvocation("eslint", [
+  const { command, args } = toolInvocation("eslint", [
     "--cache",
     "--cache-strategy",
     "content",
@@ -33,11 +32,11 @@ function runEslint(files) {
     "--",
     ...files,
   ]);
-  return spawnAsync(command, args, { shell, stdio: ["pipe", "pipe", "pipe"] });
+  return spawnAsync(command, args, { stdio: ["pipe", "pipe", "pipe"] });
 }
 
 function runPrettier(files) {
-  const { command, args, shell } = toolInvocation("prettier", [
+  const { command, args } = toolInvocation("prettier", [
     "--cache",
     "--cache-location",
     ".prettiercache",
@@ -48,7 +47,7 @@ function runPrettier(files) {
     "--",
     ...files,
   ]);
-  return spawnAsync(command, args, { shell, stdio: ["pipe", "pipe", "pipe"] });
+  return spawnAsync(command, args, { stdio: ["pipe", "pipe", "pipe"] });
 }
 
 function runStagedTestCommand(testCommand, tests) {
@@ -57,20 +56,17 @@ function runStagedTestCommand(testCommand, tests) {
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
   return spawnAsync(testCommand[0], [...testCommand.slice(1), ...tests], {
-    shell: isWindows,
     env,
     stdio: ["pipe", "pipe", "pipe"],
   });
 }
 
-const gitFiles = spawnSync(
-  "git",
-  ["diff", "--cached", "--name-only", "--diff-filter=ACMRT"],
-  {
-    encoding: "utf8",
-    shell: isWindows,
-  },
-);
+const gitFiles = run("git", [
+  "diff",
+  "--cached",
+  "--name-only",
+  "--diff-filter=ACMRT",
+]);
 
 if (gitFiles.error || gitFiles.status !== 0) {
   errorBox([
@@ -88,14 +84,7 @@ const stagedFiles = gitFiles.stdout
   .filter(Boolean);
 
 if (stagedFiles.length === 0) {
-  const anyStagedResult = spawnSync(
-    "git",
-    ["diff", "--cached", "--name-only"],
-    {
-      encoding: "utf8",
-      shell: isWindows,
-    },
-  );
+  const anyStagedResult = run("git", ["diff", "--cached", "--name-only"]);
   const hasStagedChanges =
     !anyStagedResult.error &&
     anyStagedResult.status === 0 &&
@@ -118,10 +107,7 @@ if (stagedFiles.length === 0) {
   process.exit(0);
 }
 
-const unstagedFilesResult = spawnSync("git", ["diff", "--name-only"], {
-  encoding: "utf8",
-  shell: isWindows,
-});
+const unstagedFilesResult = run("git", ["diff", "--name-only"]);
 
 const canInspectUnstagedFiles =
   !unstagedFilesResult.error && unstagedFilesResult.status === 0;

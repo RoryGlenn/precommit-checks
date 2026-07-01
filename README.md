@@ -7,7 +7,7 @@ Advisory pre-commit checks that nudge, never block. A non-blocking pre-commit fl
 ## Requirements
 
 - **Node.js >= 22** — the scripts use modern ESM features and the built-in `node --test` runner.
-- Dev dependencies in your project: `husky`, `lint-staged`, `eslint`, `prettier`, plus `boxen` and `picocolors` for the boxed output.
+- Dev dependencies in your project: `husky`, `lint-staged`, `eslint`, `prettier`, plus `boxen`, `picocolors`, and `cross-spawn` for the boxed output and cross-platform process spawning.
 - An ESLint flat config (`eslint.config.js`) in your project. For TypeScript, it must be TypeScript-aware (see [TypeScript and mixed projects](#typescript-and-mixed-projects)). The bundled config includes React support via `eslint-plugin-react` and `eslint-plugin-react-hooks`, applying recommended rules to `.jsx`/`.tsx` files with automatic React version detection.
 
 ## Installation
@@ -15,7 +15,7 @@ Advisory pre-commit checks that nudge, never block. A non-blocking pre-commit fl
 1. Install the dev dependencies:
 
    ```bash
-   npm install -D husky lint-staged eslint prettier boxen picocolors
+   npm install -D husky lint-staged eslint prettier boxen picocolors cross-spawn
    ```
 
 2. Copy the `scripts/` directory (including `scripts/lib/`) into your project root.
@@ -126,6 +126,34 @@ By default the hook only checks for _missing_ tests; it does not run them. To al
 When enabled, the hook runs `testCommand` against the staged test files plus the tests it can find for staged source files. Failures are reported as an advisory warning (the commit still continues). `testCommand` is optional and defaults to `node --test`.
 
 > Note: enabling `runStagedTests` executes a repo-defined command (`testCommand`) on every commit, just like `lint-staged`. Only enable it in repositories you trust. Spawned tools are capped by a timeout so a hung command can't wedge a commit.
+
+### Using a different test runner (Vitest, Jest, …)
+
+`testCommand` can be **any** command that accepts test file paths as arguments — both the staged-test check and the push gate append the relevant test files to it. If your project doesn't use Node's built-in runner, point it at your own.
+
+**Vitest:**
+
+```json
+{
+  "precommitChecks": {
+    "testCommand": ["npx", "vitest", "run"]
+  }
+}
+```
+
+The `run` subcommand is required — without it Vitest starts **watch mode** and the hook will hang.
+
+**Jest:**
+
+```json
+{
+  "precommitChecks": {
+    "testCommand": ["npx", "jest"]
+  }
+}
+```
+
+> **Common gotcha:** if your tests rely on a runner's globals (e.g. Vitest's or Jest's `test`/`expect` without importing them), running them under the default `node --test` fails with `ReferenceError: test is not defined`. That's not a broken test — it's the wrong runner. Set `testCommand` to your actual runner.
 
 ## Blocking pushes on test failure (opt-in)
 
