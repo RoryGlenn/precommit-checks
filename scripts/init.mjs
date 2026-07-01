@@ -47,19 +47,36 @@ const scripts = {
   "test:precommit": `${BIN} precommit`,
   doctor: `${BIN} doctor`,
 };
+// Legacy 1.x values that pointed at vendored scripts; upgrade them to the bin.
+const legacyScripts = {
+  "commit:fix": "node scripts/commit-fix.mjs",
+  "fix:staged": "node scripts/fix-staged.mjs",
+  "test:precommit": "node scripts/precommit-unified.mjs",
+  doctor: "node scripts/doctor.mjs",
+};
 for (const [name, value] of Object.entries(scripts)) {
-  if (!pkg.scripts[name]) {
+  const current = pkg.scripts[name];
+  if ((!current || current === legacyScripts[name]) && current !== value) {
     pkg.scripts[name] = value;
     created.push(`script ${name}`);
   }
 }
 
+const jsGlob = "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}";
 if (!pkg["lint-staged"]) {
   pkg["lint-staged"] = {
-    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [`${BIN} fix-staged-js`],
+    [jsGlob]: [`${BIN} fix-staged-js`],
     "*.{json,css,scss,md,html,yml,yaml}": ["prettier --write --ignore-unknown"],
   };
   created.push("lint-staged config");
+} else if (
+  Array.isArray(pkg["lint-staged"][jsGlob]) &&
+  pkg["lint-staged"][jsGlob].length === 1 &&
+  pkg["lint-staged"][jsGlob][0] === "node scripts/fix-staged-js.mjs"
+) {
+  // Upgrade the legacy vendored task to the bin.
+  pkg["lint-staged"][jsGlob] = [`${BIN} fix-staged-js`];
+  created.push("lint-staged task");
 }
 
 if (!pkg.precommitChecks) {
@@ -73,8 +90,19 @@ fs.writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
 run("npx", ["husky"]);
 
 fs.mkdirSync(".husky", { recursive: true });
+// Legacy 1.x hook bodies that ran vendored scripts; upgrade them to the bin.
+const legacyHookBodies = {
+  ".husky/pre-commit": "node scripts/precommit-unified.mjs\n",
+  ".husky/pre-push": "node scripts/prepush.mjs\n",
+};
 for (const [hookPath, body] of Object.entries(HOOK_BODIES)) {
-  if (!fs.existsSync(hookPath)) {
+  const current = fs.existsSync(hookPath)
+    ? fs.readFileSync(hookPath, "utf8")
+    : null;
+  if (
+    (current === null || current === legacyHookBodies[hookPath]) &&
+    current !== body
+  ) {
     fs.writeFileSync(hookPath, body);
     fs.chmodSync(hookPath, 0o755);
     created.push(hookPath);
