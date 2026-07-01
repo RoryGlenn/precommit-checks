@@ -66,6 +66,7 @@ Your next `git commit` will run the advisory checks.
 - `scripts/precommit-unified.mjs` — the pre-commit hook entrypoint (advisory checks).
 - `scripts/init.mjs` — one-command setup for a consuming repo.
 - `scripts/prepush.mjs` — the opt-in pre-push test gate.
+- `scripts/doctor.mjs` — `npm run doctor`, verifies and repairs the Husky hook wiring.
 - `scripts/fix-staged.mjs` — `npm run fix:staged`, runs lint-staged on staged files.
 - `scripts/fix-staged-js.mjs` — lint-staged task: `eslint --fix` + `prettier --write`.
 - `scripts/commit-fix.mjs` — `npm run commit:fix`, auto-fixes and amends the latest commit.
@@ -252,6 +253,7 @@ These scripts are Git-hook tooling, so disable Husky in CI with `HUSKY=0` to avo
 
 ```bash
 npm run init            # one-command setup (hooks, scripts, config)
+npm run doctor          # verify and repair the git hook wiring
 npm run test:precommit  # run the unified hook script directly
 npm run fix:staged      # apply staged-only ESLint/Prettier fixes
 npm run commit:fix      # apply automatic fixes to the latest clean commit and amend it
@@ -260,6 +262,24 @@ npm run test:coverage   # run tests with a coverage report
 npm run lint            # lint the full repo
 npm run format:check    # check formatting across the repo
 ```
+
+## Troubleshooting
+
+### The hooks silently stopped running
+
+If commits and pushes suddenly skip all checks — no advisory box, no push gate — the Husky wiring was probably knocked out. Husky runs every hook through the **gitignored** `.husky/_` wrapper directory plus git's `core.hooksPath`, and **neither is committed**. A `git clean -fdx`, a stale checkout, a discarded-untracked-files action in a Git GUI, or a dependency reinstall that skipped `prepare` can remove them — which silently switches off _both_ `pre-commit` and `pre-push` at once.
+
+Repair it:
+
+```bash
+npm run doctor
+```
+
+`doctor` checks that `core.hooksPath` points at `.husky/_`, that the `.husky/_` wrappers exist, and that `.husky/pre-commit`/`.husky/pre-push` are present — and rebuilds whatever is missing (without overwriting existing hooks). It's safe to run anytime; if everything is already healthy it just says so.
+
+To prevent it recurring, keep `"prepare": "husky"` in your `package.json` so every `npm install`/`npm ci` re-establishes the wiring automatically.
+
+> Also check you haven't left `HUSKY=0` set in your environment — that env var disables **all** Husky hooks until it's removed.
 
 ## License
 

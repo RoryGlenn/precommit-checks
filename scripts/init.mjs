@@ -28,6 +28,7 @@ const scripts = {
   "commit:fix": "node scripts/commit-fix.mjs",
   "fix:staged": "node scripts/fix-staged.mjs",
   "test:precommit": "node scripts/precommit-unified.mjs",
+  doctor: "node scripts/doctor.mjs",
 };
 for (const [name, value] of Object.entries(scripts)) {
   if (!pkg.scripts[name]) {

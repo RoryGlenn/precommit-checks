@@ -41,6 +41,7 @@
     "format:check": "prettier . --check",
     "commit:fix": "node scripts/commit-fix.mjs",
     "fix:staged": "node scripts/fix-staged.mjs",
+    "doctor": "node scripts/doctor.mjs",
     "test": "node --test test/*.test.mjs",
     "test:coverage": "node --test --experimental-test-coverage test/*.test.mjs",
     "test:precommit": "node scripts/precommit-unified.mjs"
